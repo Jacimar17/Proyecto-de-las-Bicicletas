@@ -2,28 +2,28 @@ const Bicycle = require("../models/Bicycle");
 
 const createBicycle = async (req, res) => {
   try {
-    const { codigo, estacionActual, codigoDesbloqueo } = req.body;
+    const { code, currentStation, unlockCode, status } = req.body;
 
-    if (!codigo || !estacionActual || !codigoDesbloqueo) {
+    if (!code || !currentStation || !unlockCode) {
       return res.status(400).json({
-        message: "codigo, estacionActual y codigoDesbloqueo son obligatorios",
+        message: "code, currentStation and unlockCode are required",
       });
     }
 
     const bicycle = await Bicycle.create({
-      codigo,
-      estacionActual,
-      codigoDesbloqueo,
-      estado: req.body.estado || "DISPONIBLE",
+      code,
+      currentStation,
+      unlockCode,
+      status: status || "AVAILABLE",
     });
 
     res.status(201).json({
-      message: "Bicicleta creada correctamente",
+      message: "Bicycle created successfully",
       data: bicycle,
     });
   } catch (error) {
     res.status(500).json({
-      message: "Error al crear bicicleta",
+      message: "Error creating bicycle",
       error: error.message,
     });
   }
@@ -34,12 +34,12 @@ const getBicycles = async (req, res) => {
     const bicycles = await Bicycle.find();
 
     res.json({
-      message: "Listado de bicicletas",
+      message: "Bicycle list",
       data: bicycles,
     });
   } catch (error) {
     res.status(500).json({
-      message: "Error al obtener bicicletas",
+      message: "Error getting bicycles",
       error: error.message,
     });
   }
@@ -51,17 +51,17 @@ const getBicycleById = async (req, res) => {
 
     if (!bicycle) {
       return res.status(404).json({
-        message: "Bicicleta no encontrada",
+        message: "Bicycle not found",
       });
     }
 
     res.json({
-      message: "Bicicleta encontrada",
+      message: "Bicycle found",
       data: bicycle,
     });
   } catch (error) {
     res.status(500).json({
-      message: "Error al obtener bicicleta",
+      message: "Error getting bicycle",
       error: error.message,
     });
   }
@@ -76,17 +76,17 @@ const updateBicycle = async (req, res) => {
 
     if (!bicycle) {
       return res.status(404).json({
-        message: "Bicicleta no encontrada",
+        message: "Bicycle not found",
       });
     }
 
     res.json({
-      message: "Bicicleta actualizada correctamente",
+      message: "Bicycle updated successfully",
       data: bicycle,
     });
   } catch (error) {
     res.status(500).json({
-      message: "Error al actualizar bicicleta",
+      message: "Error updating bicycle",
       error: error.message,
     });
   }
@@ -98,16 +98,16 @@ const deleteBicycle = async (req, res) => {
 
     if (!bicycle) {
       return res.status(404).json({
-        message: "Bicicleta no encontrada",
+        message: "Bicycle not found",
       });
     }
 
     res.json({
-      message: "Bicicleta eliminada correctamente",
+      message: "Bicycle deleted successfully",
     });
   } catch (error) {
     res.status(500).json({
-      message: "Error al eliminar bicicleta",
+      message: "Error deleting bicycle",
       error: error.message,
     });
   }
