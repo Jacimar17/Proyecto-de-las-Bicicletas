@@ -8,5 +8,6 @@ router.get("/bicycles", bicycleController.getBicycles);
 router.get("/bicycles/:id", bicycleController.getBicycleById);
 router.put("/bicycles/:id", bicycleController.updateBicycle);
 router.delete("/bicycles/:id", bicycleController.deleteBicycle);
+router.patch("/bicycles/:id/status", bicycleController.updateBicycleStatus);
 
 module.exports = router;

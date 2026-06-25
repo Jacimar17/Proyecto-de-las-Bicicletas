@@ -70,7 +70,7 @@ const getBicycleById = async (req, res) => {
 const updateBicycle = async (req, res) => {
   try {
     const bicycle = await Bicycle.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     });
 
@@ -113,10 +113,45 @@ const deleteBicycle = async (req, res) => {
   }
 };
 
+const updateBicycleStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    if (!["AVAILABLE", "IN_USE", "NOT_SUITABLE"].includes(status)) {
+      return res.status(400).json({
+        message: "Invalid bicycle status",
+      });
+    }
+
+    const bicycle = await Bicycle.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { returnDocument: 'after', runValidators: true }
+    );
+
+    if (!bicycle) {
+      return res.status(404).json({
+        message: "Bicycle not found",
+      });
+    }
+
+    res.json({
+      message: "Bicycle status updated successfully",
+      data: bicycle,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error updating bicycle status",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createBicycle,
   getBicycles,
   getBicycleById,
   updateBicycle,
   deleteBicycle,
+  updateBicycleStatus,
 };

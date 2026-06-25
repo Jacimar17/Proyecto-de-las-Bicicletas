@@ -6,9 +6,9 @@ const connectDB = async () => {
       "mongodb+srv://admin_bicis:1234@bicicletas-cluster.mepyxlc.mongodb.net/bicicletas"
     );
 
-    console.log("MongoDB conectado");
+    console.log("MongoDB connected");
   } catch (error) {
-    console.log("Error de conexión:", error);
+    console.log("MongoDB connection error:", error.message);
   }
 };
 
