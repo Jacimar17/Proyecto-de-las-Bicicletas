@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const bicycleRoutes = require("./routes/bicycle.routes");
+const maintenanceRoutes = require("./routes/maintenance.routes");
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.get("/", (req, res) => {
     endpoints: {
       api: "/api",
       bicycles: "/api/bicycles",
+      app.use("/api/maintenance", maintenanceRoutes);
     },
   });
 });
