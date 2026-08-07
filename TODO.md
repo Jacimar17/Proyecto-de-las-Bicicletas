@@ -31,13 +31,21 @@ Crear un menú CLI que pida login y, según el rol, ofrezca diferentes funcional
   - CRUD de usuarios
 - Si rol es `cliente`:
   - Ver bicicletas disponibles
+  - Solicitar una bicicleta (la marca como IN_USE)
   - Ver su perfil
 - Llamar a la API local `http://localhost:3000`.
 
 ### 5. ✅ Editar `package.json`
 - Agregar script: `"menu": "node menu.js"`.
 
-### 6. ⏳ Prueba final
+### 6. ✅ Solicitar bicicleta (función del cliente)
+- `src/models/Bicycle.js`: agregar campo `rentedBy`.
+- `src/controllers/bicycle.controller.js`: agregar `requestBicycle` (valida AVAILABLE → IN_USE, guarda rentedBy).
+- `src/routes/bicycle.routes.js`: agregar ruta `PATCH /api/bicycles/:id/request`.
+- `menu.js`: opción "Solicitar una bicicleta disponible" en menú cliente.
+
+### 7. ⏳ Prueba final
 - Reiniciar el servidor (`Ctrl+C` y `npm start` de nuevo) para cargar los cambios.
 - Ejecutar menú (`npm run menu`).
 - Iniciar sesión con `admin@gmail.com` / `adminpirulo123` → debe mostrar MENÚ ADMINISTRADOR.
+- Iniciar sesión como cliente → opción "Solicitar una bicicleta disponible" debe marcarla como EN USO (IN_USE).

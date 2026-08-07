@@ -65,6 +65,9 @@ function showBicycles(bicycles) {
     console.log(`Estación: ${b.currentStation}`);
     console.log(`Estado: ${translateStatus(b.status)}`);
     console.log(`Código de bloqueo: ${b.unlockCode}`);
+    if (b.rentedBy) {
+      console.log(`Solicitada por: ${b.rentedBy}`);
+    }
   });
   console.log("");
 }
@@ -118,9 +121,10 @@ async function clientMenu() {
     console.log("\n========= MENÚ CLIENTE =========");
     console.log(`Usuario: ${currentUser.name} (${currentUser.email})`);
     console.log("1. Ver bicicletas disponibles");
-    console.log("2. Ver mi perfil");
-    console.log("3. Cerrar sesión");
-    console.log("4. Salir");
+    console.log("2. Solicitar una bicicleta disponible");
+    console.log("3. Ver mi perfil");
+    console.log("4. Cerrar sesión");
+    console.log("5. Salir");
     const opt = await ask("\nSelecciona una opción: ");
 
     switch (opt) {
@@ -128,13 +132,16 @@ async function clientMenu() {
         await clientViewBicycles();
         break;
       case "2":
-        await viewProfile();
+        await clientRequestBicycle();
         break;
       case "3":
+        await viewProfile();
+        break;
+      case "4":
         currentUser = null;
         console.log("\nSesión cerrada.\n");
         return "login";
-      case "4":
+      case "5":
         return "exit";
       default:
         console.log("Opción no válida.");
@@ -150,6 +157,46 @@ async function clientViewBicycles() {
     showBicycles(available);
   } else {
     print(data);
+  }
+}
+
+async function clientRequestBicycle() {
+  // Primero mostrar las disponibles
+  const { status, data } = await apiFetch("/api/bicycles");
+  if (status !== 200) {
+    print(data);
+    return;
+  }
+  const available = (data.data || []).filter((b) => b.status === "AVAILABLE");
+
+  if (available.length === 0) {
+    console.log("\nNo hay bicicletas disponibles en este momento.\n");
+    return;
+  }
+
+  console.log("\n----- BICICLETAS DISPONIBLES -----");
+  showBicycles(available);
+
+  const id = await ask("\nIngresa el ID de la bicicleta que deseas solicitar: ");
+  const confirm = await ask(`¿Confirmas solicitar la bicicleta ${id}? (si/no): `);
+  if (confirm.toLowerCase() !== "si") {
+    console.log("Solicitud cancelada.\n");
+    return;
+  }
+
+  const { status: s, data: d } = await apiFetch(
+    `/api/bicycles/${id}/request`,
+    "PATCH",
+    { rentedBy: currentUser.email }
+  );
+
+  if (s === 200) {
+    console.log(`\n${d.message}`);
+    console.log(`Estado actual: ${translateStatus(d.data.status)}\n`);
+  } else if (s === 409) {
+    console.log(`\n${d.message}\n`);
+  } else {
+    print(d);
   }
 }
 
@@ -527,3 +574,4 @@ async function mainMenu() {
 console.log("Conectando a la API en: " + API_URL);
 console.log("Asegúrate de que el servidor esté corriendo con `npm start`.\n");
 mainMenu();
+

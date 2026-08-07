@@ -23,6 +23,11 @@ const bicycleSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    rentedBy: {
+      type: String,
+      default: null,
+      trim: true,
+    },
   },
   {
     timestamps: true,

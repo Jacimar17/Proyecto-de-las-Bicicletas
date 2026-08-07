@@ -10,7 +10,7 @@ const User = require("../models/user.model");
 // CREATE -> POST /api/users
 exports.createUser = async (req, res) => {
   try {
-    const { name, lastName, email, password } = req.body;
+    const { name, email, password } = req.body;
 
     const existing = await User.findOne({ email });
     if (existing) {
@@ -22,12 +22,8 @@ exports.createUser = async (req, res) => {
 
 const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Si el email corresponde al administrador, se le asigna el rol admin
-    const role = email.toLowerCase() === "admin@gmail.com" ? "admin" : "cliente";
-
     const newUser = new User({
       name,
-      lastName,
       email,
       password: hashedPassword,
       role,
@@ -142,14 +138,12 @@ exports.deleteUser = async (req, res) => {
 
 /**
  * LOGIN -> POST /api/users/login
- * Acepta dos formas de credenciales:
- *  - { name, lastName, password } (nombre + apellido + contraseña)
  *  - { email, password } (gmail + contraseña)
  * Devuelve un token JWT si las credenciales son válidas.
  */
 exports.login = async (req, res) => {
   try {
-    const { name, lastName, email, password } = req.body;
+    const { name, email, password } = req.body;
 
     if (!password) {
       return res.status(400).json({ ok: false, mensaje: "La contraseña es obligatoria" });
@@ -160,13 +154,13 @@ exports.login = async (req, res) => {
 
     if (email) {
       query = { email: email.toLowerCase() };
-    } else if (name && lastName) {
-      query = { name, lastName };
+    } else if (name ) {
+      query = { name: name.trim() };
     } else {
       return res.status(400).json({
         ok: false,
         mensaje:
-          "Debes proporcionar email y contraseña, o nombre, apellido y contraseña",
+          "Debes proporcionar email y contraseña, o nombre y contraseña",
       });
     }
 
@@ -183,20 +177,12 @@ if (!user) {
       return res.status(401).json({ ok: false, mensaje: "Credenciales incorrectas" });
     }
 
-    // Si el email es el del administrador, forzamos el rol admin
-    // (corrige usuarios admin existentes que se registraron antes de existir el campo role)
-    if (user.email.toLowerCase() === "admin@gmail.com" && user.role !== "admin") {
-      user.role = "admin";
-      await user.save();
-    }
-
     // Generar token JWT
     const token = jwt.sign(
       { id: user._id, name: user.name, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "2h" }
     );
-
     const userResponse = user.toObject();
     delete userResponse.password;
 

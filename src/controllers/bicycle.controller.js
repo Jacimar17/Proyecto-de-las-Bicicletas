@@ -147,6 +147,48 @@ const updateBicycleStatus = async (req, res) => {
   }
 };
 
+// Solicitar (alquilar) una bicicleta disponible. La marca como IN_USE.
+const requestBicycle = async (req, res) => {
+  try {
+    const { rentedBy } = req.body;
+
+    if (!rentedBy) {
+      return res.status(400).json({
+        message: "El campo rentedBy (email del cliente) es obligatorio",
+      });
+    }
+
+    const bicycle = await Bicycle.findById(req.params.id);
+
+    if (!bicycle) {
+      return res.status(404).json({
+        message: "Bicycle not found",
+      });
+    }
+
+    if (bicycle.status !== "AVAILABLE") {
+      return res.status(409).json({
+        message: "La bicicleta no está disponible en este momento",
+      });
+    }
+
+    bicycle.status = "IN_USE";
+    bicycle.rentedBy = rentedBy;
+
+    await bicycle.save();
+
+    res.json({
+      message: "Bicicleta solicitada correctamente. Ahora está marcada como IN_USE (no disponible)",
+      data: bicycle,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error requesting bicycle",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createBicycle,
   getBicycles,
@@ -154,4 +196,5 @@ module.exports = {
   updateBicycle,
   deleteBicycle,
   updateBicycleStatus,
+  requestBicycle,
 };
