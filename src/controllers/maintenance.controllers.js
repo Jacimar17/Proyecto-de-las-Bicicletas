@@ -1,4 +1,21 @@
 const Bicycle = require("../models/Bicycle");
+const jwt = require("jsonwebtoken");
+
+// Verifica si el usuario que hace la petición es el administrador
+// usando el rol contenido en el token JWT (Authorization: Bearer <token>)
+const isAdmin = (req) => {
+  try {
+    const authHeader = req.headers.authorization || "";
+    if (!authHeader.startsWith("Bearer ")) return false;
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    return decoded.role === "admin";
+  } catch (error) {
+    return false;
+  }
+};
 
 // Buscar bicicleta por ID
 const getBikeById = async (req, res) => {
@@ -27,6 +44,13 @@ const getBikeById = async (req, res) => {
 // Marcar bicicleta como APTA
 const markSuitable = async (req, res) => {
   try {
+    if (!isAdmin(req)) {
+      return res.status(403).json({
+        success: false,
+        message: "Acceso denegado: solo el administrador puede realizar esta acción",
+      });
+    }
+
     const { technician } = req.body;
 
     const bike = await Bicycle.findById(req.params.id);
@@ -60,6 +84,13 @@ const markSuitable = async (req, res) => {
 // Marcar bicicleta como NO APTA
 const markNotSuitable = async (req, res) => {
   try {
+    if (!isAdmin(req)) {
+      return res.status(403).json({
+        success: false,
+        message: "Acceso denegado: solo el administrador puede realizar esta acción",
+      });
+    }
+
     const { technician } = req.body;
 
     const bike = await Bicycle.findById(req.params.id);
