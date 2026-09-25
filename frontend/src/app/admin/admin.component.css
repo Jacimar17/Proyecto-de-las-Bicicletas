@@ -1,0 +1,35 @@
+.admin-container {
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.formulario {
+  margin-bottom: 24px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.form-row mat-form-field {
+  flex: 1;
+  min-width: 180px;
+}
+
+.tabla {
+  width: 100%;
+}
+
+.sin-datos {
+  text-align: center;
+  color: gray;
+  margin-top: 32px;
+}
