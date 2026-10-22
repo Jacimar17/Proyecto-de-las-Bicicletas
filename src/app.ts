@@ -64,7 +64,8 @@ export class App {
 
     private setupRoutes(): void {
         const bicicletaRepository = new BicicletaRepositoryMongo(this.db);
-        const bicicletaService = new BicicletaService(bicicletaRepository);
+        const estacionRepository = new EstacionRepositoryMongo(this.db);
+        const bicicletaService = new BicicletaService(bicicletaRepository, estacionRepository);
         const bicicletaController = new BicicletaController(bicicletaService);
         const bicicletaRoutes = new BicicletaRoutes(bicicletaController);
 
@@ -73,7 +74,6 @@ export class App {
         const usuarioController = new UsuarioController(usuarioService);
         const usuarioRoutes = new UsuarioRoutes(usuarioController);
 
-        const estacionRepository = new EstacionRepositoryMongo(this.db);
         const estacionService = new EstacionService(estacionRepository, bicicletaRepository);
         const estacionController = new EstacionController(estacionService);
         const estacionRoutes = new EstacionRoutes(estacionController);

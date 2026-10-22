@@ -9,7 +9,7 @@ export class EstacionService {
         private readonly bicicletaRepository: BicicletaRepository
     ) {}
 
-    async getAll(): Promise<any[]> {
+    async getAll(): Promise<Array<Estacion & { total_bicicletas: number; disponibles: number }>> {
         const estaciones = await this.estacionRepository.findAll();
         const result = await Promise.all(estaciones.map(async (estacion) => {
             const bicicletas = await this.bicicletaRepository.findByEstacion(estacion.id!);
@@ -19,7 +19,7 @@ export class EstacionService {
         return result;
     }
 
-    async getById(id: string): Promise<any> {
+    async getById(id: string): Promise<Estacion & { bicicletas: Awaited<ReturnType<BicicletaRepository['findByEstacion']>>; disponibles: number }> {
         const estacion = await this.estacionRepository.findById(id);
         if (!estacion) throw new Error('Estación no encontrada');
         const bicicletas = await this.bicicletaRepository.findByEstacion(id);
@@ -48,5 +48,7 @@ export class EstacionService {
         if (!data.barrio?.trim()) throw new Error('El barrio es obligatorio');
         if (!data.direccion?.trim()) throw new Error('La dirección es obligatoria');
         if (!data.capacidad || data.capacidad < 1) throw new Error('La capacidad debe ser mayor a 0');
+        if (!Number.isFinite(data.lat) || data.lat < -90 || data.lat > 90) throw new Error('La latitud no es válida');
+        if (!Number.isFinite(data.lng) || data.lng < -180 || data.lng > 180) throw new Error('La longitud no es válida');
     }
 }
