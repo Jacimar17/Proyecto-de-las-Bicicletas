@@ -21,13 +21,34 @@ export class App {
 
     constructor() {
         this.app = express();
+        this.app.use((req, res, next) => {
+            const origin = req.headers.origin;
+            if (origin === 'http://localhost:4200') {
+                res.setHeader('Access-Control-Allow-Origin', origin);
+                res.setHeader('Vary', 'Origin');
+                res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+                res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+            }
+            if (req.method === 'OPTIONS') {
+                res.sendStatus(204);
+                return;
+            }
+            next();
+        });
         this.app.use(express.json());
         this.app.use(express.urlencoded({ extended: true }));
     }
 
     public async start(): Promise<void> {
-        const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
-        const dbName = process.env.MONGO_DB_NAME || 'bicicletas_db';
+        const mongoUri = process.env.MONGO_URI;
+        const dbName = process.env.MONGO_DB_NAME;
+        const port = Number(process.env.PORT || 3000);
+
+        if (!mongoUri) throw new Error('MONGO_URI no está configurado');
+        if (!dbName) throw new Error('MONGO_DB_NAME no está configurado');
+        if (!Number.isInteger(port) || port < 1 || port > 65535) {
+            throw new Error('PORT debe ser un puerto válido');
+        }
 
         this.client = new MongoClient(mongoUri);
         await this.client.connect();
@@ -36,8 +57,8 @@ export class App {
 
         this.setupRoutes();
 
-        this.app.listen(3000, () => {
-            console.log('Server is running on port 3000');
+        this.app.listen(port, () => {
+            console.log(`Server is running on port ${port}`);
         });
     }
 
