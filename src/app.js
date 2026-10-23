@@ -1,8 +1,8 @@
 const express = require("express");
 const cors = require("cors");
-const bicycleRoutes = require("./routes/bicycle.routes");
-const maintenanceRoutes = require("./routes/maintenance.routers");
-const userRoutes = require("./routes/user.routes");
+const bicycleRoutes = require("./bicycles/bicycle.routes");
+const maintenanceRoutes = require("./maintenance/maintenance.routes");
+const userRoutes = require("./users/user.routes");
 const app = express();
 
 app.use(cors());

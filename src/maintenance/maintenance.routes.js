@@ -6,7 +6,7 @@ const {
   getBikeById,
   markSuitable,
   markNotSuitable,
-} = require("../controllers/maintenance.controllers");
+} = require("./maintenance.controller");
 
 // Buscar bicicleta
 router.get("/:id", getBikeById);

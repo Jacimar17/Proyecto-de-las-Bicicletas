@@ -1,4 +1,4 @@
-const Bicycle = require("../models/Bicycle");
+const Bicycle = require("./bicycle.model");
 
 const createBicycle = async (req, res) => {
   try {

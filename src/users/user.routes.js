@@ -8,7 +8,7 @@ const {
   deleteUser,
   login,
   verifyToken,
-} = require("../controllers/user.controller");
+} = require("./user.controller");
 
 // Rutas del CRUD de User (Cliente)
 // Montadas bajo /api/users en app.js

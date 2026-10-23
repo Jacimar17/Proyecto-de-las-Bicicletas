@@ -1,4 +1,4 @@
-const Bicycle = require("../models/Bicycle");
+const Bicycle = require("../bicycles/bicycle.model");
 const jwt = require("jsonwebtoken");
 
 // Verifica si el usuario que hace la petición es el administrador
