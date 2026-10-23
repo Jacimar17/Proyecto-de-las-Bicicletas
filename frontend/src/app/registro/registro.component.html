@@ -1,0 +1,38 @@
+<div class="registro-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>🚲 Crear Cuenta</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre completo</mat-label>
+        <input matInput [(ngModel)]="nombre" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>DNI</mat-label>
+        <input matInput [(ngModel)]="dni" placeholder="40123456" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Email</mat-label>
+        <input matInput type="email" [(ngModel)]="email" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Contraseña</mat-label>
+        <input matInput type="password" [(ngModel)]="password" />
+      </mat-form-field>
+
+      <p class="error" *ngIf="error">{{ error }}</p>
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-raised-button color="primary" (click)="registro()" [disabled]="cargando" class="full-width">
+        {{ cargando ? 'Registrando...' : 'Registrarse' }}
+      </button>
+    </mat-card-actions>
+    <mat-card-footer>
+      <p class="centro">¿Ya tenés cuenta? <a routerLink="/login">Iniciá sesión</a></p>
+    </mat-card-footer>
+  </mat-card>
+</div>

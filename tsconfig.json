@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": [
+    "menu.ts",
+    "src/bicycles/**/*.ts",
+    "src/estacion/estacion.entity.ts",
+    "src/estacion/estacion.repository.interface.ts",
+    "src/estacion/estacion.service.ts"
+  ]
+}

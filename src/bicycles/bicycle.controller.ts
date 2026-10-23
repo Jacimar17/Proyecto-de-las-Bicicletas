@@ -1,6 +1,10 @@
-const Bicycle = require("./bicycle.model");
+import { Request, Response } from "express";
+import Bicycle = require("./bicycle.model");
 
-const createBicycle = async (req, res) => {
+const createBicycle = async (
+  req: Request,
+  res: Response
+): Promise<Response | void> => {
   try {
     const { code, currentStation, unlockCode, status } = req.body;
 
@@ -21,15 +25,18 @@ const createBicycle = async (req, res) => {
       message: "Bicycle created successfully",
       data: bicycle,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     res.status(500).json({
       message: "Error creating bicycle",
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 };
 
-const getBicycles = async (req, res) => {
+const getBicycles = async (
+  req: Request,
+  res: Response
+): Promise<Response | void> => {
   try {
     const bicycles = await Bicycle.find();
 
@@ -37,15 +44,18 @@ const getBicycles = async (req, res) => {
       message: "Bicycle list",
       data: bicycles,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     res.status(500).json({
       message: "Error getting bicycles",
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 };
 
-const getBicycleById = async (req, res) => {
+const getBicycleById = async (
+  req: Request,
+  res: Response
+): Promise<Response | void> => {
   try {
     const bicycle = await Bicycle.findById(req.params.id);
 
@@ -59,15 +69,18 @@ const getBicycleById = async (req, res) => {
       message: "Bicycle found",
       data: bicycle,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     res.status(500).json({
       message: "Error getting bicycle",
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 };
 
-const updateBicycle = async (req, res) => {
+const updateBicycle = async (
+  req: Request,
+  res: Response
+): Promise<Response | void> => {
   try {
     const bicycle = await Bicycle.findByIdAndUpdate(req.params.id, req.body, {
       returnDocument: 'after',
@@ -84,15 +97,18 @@ const updateBicycle = async (req, res) => {
       message: "Bicycle updated successfully",
       data: bicycle,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     res.status(500).json({
       message: "Error updating bicycle",
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 };
 
-const deleteBicycle = async (req, res) => {
+const deleteBicycle = async (
+  req: Request,
+  res: Response
+): Promise<Response | void> => {
   try {
     const bicycle = await Bicycle.findByIdAndDelete(req.params.id);
 
@@ -105,22 +121,26 @@ const deleteBicycle = async (req, res) => {
     res.json({
       message: "Bicycle deleted successfully",
     });
-  } catch (error) {
+  } catch (error: unknown) {
     res.status(500).json({
       message: "Error deleting bicycle",
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 };
 
-const updateBicycleStatus = async (req, res) => {
+const updateBicycleStatus = async (
+  req: Request,
+  res: Response
+): Promise<Response | void> => {
   try {
     const { status } = req.body;
 
     if (!["AVAILABLE", "IN_USE", "NOT_SUITABLE"].includes(status)) {
-      return res.status(400).json({
+      res.status(400).json({
         message: "Invalid bicycle status",
       });
+      return;
     }
 
     const bicycle = await Bicycle.findByIdAndUpdate(
@@ -139,16 +159,19 @@ const updateBicycleStatus = async (req, res) => {
       message: "Bicycle status updated successfully",
       data: bicycle,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     res.status(500).json({
       message: "Error updating bicycle status",
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 };
 
 // Solicitar (alquilar) una bicicleta disponible. La marca como IN_USE.
-const requestBicycle = async (req, res) => {
+const requestBicycle = async (
+  req: Request,
+  res: Response
+): Promise<Response | void> => {
   try {
     const { rentedBy } = req.body;
 
@@ -181,15 +204,15 @@ const requestBicycle = async (req, res) => {
       message: "Bicicleta solicitada correctamente. Ahora está marcada como IN_USE (no disponible)",
       data: bicycle,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     res.status(500).json({
       message: "Error requesting bicycle",
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 };
 
-module.exports = {
+const bicycleController = {
   createBicycle,
   getBicycles,
   getBicycleById,
@@ -198,3 +221,5 @@ module.exports = {
   updateBicycleStatus,
   requestBicycle,
 };
+
+export = bicycleController;

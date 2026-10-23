@@ -1,5 +1,5 @@
-const express = require("express");
-const bicycleController = require("./bicycle.controller");
+import express = require("express");
+import bicycleController = require("./bicycle.controller");
 
 const router = express.Router();
 
@@ -11,4 +11,4 @@ router.delete("/bicycles/:id", bicycleController.deleteBicycle);
 router.patch("/bicycles/:id/status", bicycleController.updateBicycleStatus);
 router.patch("/bicycles/:id/request", bicycleController.requestBicycle);
 
-module.exports = router;
+export = router;

@@ -1,6 +1,45 @@
-const readline = require("readline");
+import * as readline from "node:readline";
 
 const API_URL = "http://localhost:3000";
+
+interface Bicycle {
+  _id?: string;
+  code: string;
+  currentStation: string;
+  status: string;
+  unlockCode: string;
+  rentedBy?: string | null;
+}
+
+interface User {
+  _id?: string;
+  name: string;
+  lastName?: string;
+  email: string;
+  role?: string;
+}
+
+interface SessionUser extends User {
+  token: string;
+  role: string;
+}
+
+interface ApiData {
+  ok?: boolean;
+  mensaje?: string;
+  message?: string;
+  error?: string;
+  token?: string;
+  user?: User;
+  users?: User[];
+  total?: number;
+  data?: Bicycle | Bicycle[];
+}
+
+interface ApiResult {
+  status: number;
+  data: ApiData;
+}
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -8,28 +47,41 @@ const rl = readline.createInterface({
 });
 
 // Variable global para guardar el usuario logueado (token y email)
-let currentUser = null;
+let currentUser: SessionUser | null = null;
 
 // ---------- Utilidades ----------
-function ask(question) {
+function ask(question: string): Promise<string> {
   return new Promise((resolve) => {
     rl.question(question, (answer) => resolve(answer.trim()));
   });
 }
 
-function print(obj) {
+function print(obj: unknown): void {
   console.log(JSON.stringify(obj, null, 2));
 }
 
+function getBicycles(data: ApiData): Bicycle[] {
+  if (Array.isArray(data.data)) return data.data;
+  return data.data ? [data.data] : [];
+}
+
 // ---------- Llamadas a la API ----------
-async function apiFetch(path, method = "GET", body = null, extraHeaders = {}) {
-  const headers = { "Content-Type": "application/json", ...extraHeaders };
+async function apiFetch(
+  path: string,
+  method = "GET",
+  body: Record<string, unknown> | null = null,
+  extraHeaders: Record<string, string> = {}
+): Promise<ApiResult> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...extraHeaders,
+  };
 
   if (currentUser && currentUser.token) {
     headers["Authorization"] = `Bearer ${currentUser.token}`;
   }
 
-  const options = { method, headers };
+  const options: RequestInit = { method, headers };
 
   if (body) {
     options.body = JSON.stringify(body);
@@ -37,15 +89,15 @@ async function apiFetch(path, method = "GET", body = null, extraHeaders = {}) {
 
   try {
     const res = await fetch(`${API_URL}${path}`, options);
-    const data = await res.json();
+    const data = (await res.json()) as ApiData;
     return { status: res.status, data };
   } catch (error) {
     return { status: 0, data: { error: "No se pudo conectar con el servidor. ¿Está corriendo `npm start`?" } };
   }
 }
 
-function translateStatus(status) {
-  const map = {
+function translateStatus(status: string): string {
+  const map: Record<string, string> = {
     AVAILABLE: "DISPONIBLE",
     IN_USE: "EN USO",
     NOT_SUITABLE: "NO APTA",
@@ -53,7 +105,7 @@ function translateStatus(status) {
   return map[status] || status;
 }
 
-function showBicycles(bicycles) {
+function showBicycles(bicycles: Bicycle[] | undefined): void {
   if (!bicycles || bicycles.length === 0) {
     console.log("No hay bicicletas registradas.\n");
     return;
@@ -82,7 +134,7 @@ async function doLogin() {
 
   const { status, data } = await apiFetch("/api/users/login", "POST", { email, password });
 
-  if (status === 200 && data.ok) {
+  if (status === 200 && data.ok && data.user && data.token) {
     const userEmail = data.user.email;
     // El usuario admin se reconoce por email y/o por rol
     const role =
@@ -91,13 +143,14 @@ async function doLogin() {
         ? "admin"
         : "cliente";
 
-    currentUser = {
+    const loggedUser: SessionUser = {
       token: data.token,
       email: userEmail,
       name: data.user.name,
       role,
     };
-    console.log(`\n¡Bienvenido, ${data.user.name}! Rol: ${currentUser.role.toUpperCase()}\n`);
+    currentUser = loggedUser;
+    console.log(`\n¡Bienvenido, ${loggedUser.name}! Rol: ${loggedUser.role.toUpperCase()}\n`);
     return true;
   } else {
     console.log(`\nError: ${data.mensaje || data.message || "No se pudo iniciar sesión"}\n`);
@@ -106,20 +159,22 @@ async function doLogin() {
 }
 
 // ---------- Roles ----------
-function isAdmin() {
-  return (
+function isAdmin(): boolean {
+  return Boolean(
     currentUser &&
     (currentUser.role === "admin" || currentUser.email.toLowerCase() === "admin@gmail.com")
   );
 }
 
 // ---------- MENÚ CLIENTE ----------
-async function clientMenu() {
+async function clientMenu(): Promise<"login" | "exit"> {
   let running = true;
 
   while (running) {
+    const user = currentUser;
+    if (!user) return "login";
     console.log("\n========= MENÚ CLIENTE =========");
-    console.log(`Usuario: ${currentUser.name} (${currentUser.email})`);
+    console.log(`Usuario: ${user.name} (${user.email})`);
     console.log("1. Ver bicicletas disponibles");
     console.log("2. Solicitar una bicicleta disponible");
     console.log("3. Ver mi perfil");
@@ -147,12 +202,13 @@ async function clientMenu() {
         console.log("Opción no válida.");
     }
   }
+  return "exit";
 }
 
 async function clientViewBicycles() {
   const { status, data } = await apiFetch("/api/bicycles");
   if (status === 200) {
-    const available = (data.data || []).filter((b) => b.status === "AVAILABLE");
+    const available = getBicycles(data).filter((b) => b.status === "AVAILABLE");
     console.log("\n----- BICICLETAS DISPONIBLES -----");
     showBicycles(available);
   } else {
@@ -161,13 +217,15 @@ async function clientViewBicycles() {
 }
 
 async function clientRequestBicycle() {
+  const user = currentUser;
+  if (!user) return;
   // Primero mostrar las disponibles
   const { status, data } = await apiFetch("/api/bicycles");
   if (status !== 200) {
     print(data);
     return;
   }
-  const available = (data.data || []).filter((b) => b.status === "AVAILABLE");
+  const available = getBicycles(data).filter((b) => b.status === "AVAILABLE");
 
   if (available.length === 0) {
     console.log("\nNo hay bicicletas disponibles en este momento.\n");
@@ -187,12 +245,15 @@ async function clientRequestBicycle() {
   const { status: s, data: d } = await apiFetch(
     `/api/bicycles/${id}/request`,
     "PATCH",
-    { rentedBy: currentUser.email }
+    { rentedBy: user.email }
   );
 
   if (s === 200) {
     console.log(`\n${d.message}`);
-    console.log(`Estado actual: ${translateStatus(d.data.status)}\n`);
+    const bicycle = getBicycles(d)[0];
+    if (bicycle) {
+      console.log(`Estado actual: ${translateStatus(bicycle.status)}\n`);
+    }
   } else if (s === 409) {
     console.log(`\n${d.message}\n`);
   } else {
@@ -201,12 +262,14 @@ async function clientRequestBicycle() {
 }
 
 // ---------- MENÚ ADMIN ----------
-async function adminMenu() {
+async function adminMenu(): Promise<"login" | "exit"> {
   let running = true;
 
   while (running) {
+    const user = currentUser;
+    if (!user) return "login";
     console.log("\n========= MENÚ ADMINISTRADOR =========");
-    console.log(`Administrador: ${currentUser.name}`);
+    console.log(`Administrador: ${user.name}`);
     console.log("1. Ver estado de todas las bicicletas");
     console.log("2. Marcar bicicleta como APTA");
     console.log("3. Marcar bicicleta como NO APTA");
@@ -242,19 +305,22 @@ async function adminMenu() {
         console.log("Opción no válida.");
     }
   }
+  return "exit";
 }
 
 async function adminViewAllBicycles() {
   const { status, data } = await apiFetch("/api/bicycles");
   if (status === 200) {
     console.log("\n----- ESTADO DE TODAS LAS BICICLETAS -----");
-    showBicycles(data.data);
+    showBicycles(getBicycles(data));
   } else {
     print(data);
   }
 }
 
-async function adminMarkStatus(targetStatus) {
+async function adminMarkStatus(targetStatus: string): Promise<void> {
+  const user = currentUser;
+  if (!user) return;
   const bikeId = await ask("Ingresa el ID de la bicicleta: ");
   const technician = await ask("Nombre del técnico: ");
 
@@ -265,12 +331,15 @@ async function adminMarkStatus(targetStatus) {
     `/api/maintenance/${bikeId}/${action}`,
     "PATCH",
     tech,
-    { "x-user-email": currentUser.email }
+    { "x-user-email": user.email }
   );
 
   if (status === 200) {
     console.log(`\n${data.message || "Operación exitosa"}`);
-    console.log(`Estado actual: ${translateStatus(data.data.status)}\n`);
+    const bicycle = getBicycles(data)[0];
+    if (bicycle) {
+      console.log(`Estado actual: ${translateStatus(bicycle.status)}\n`);
+    }
   } else {
     if (status === 403) {
       console.log("\nAcceso denegado: no tienes permisos de administrador.\n");
@@ -332,7 +401,7 @@ async function createBicycleFlow() {
   });
 
   if (s === 201) {
-    console.log(`\nBicicleta creada correctamente. ID: ${data.data._id}\n`);
+    console.log(`\nBicicleta creada correctamente. ID: ${getBicycles(data)[0]?._id}\n`);
   } else {
     print(data);
   }
@@ -342,7 +411,7 @@ async function getBicycleFlow() {
   const id = await ask("ID de la bicicleta: ");
   const { status, data } = await apiFetch(`/api/bicycles/${id}`);
   if (status === 200) {
-    showBicycles([data.data]);
+    showBicycles(getBicycles(data));
   } else {
     print(data);
   }
@@ -354,7 +423,7 @@ async function updateBicycleFlow() {
   const currentStation = await ask("Nueva estación (Enter = no cambiar): ");
   const unlockCode = await ask("Nuevo código de bloqueo (Enter = no cambiar): ");
 
-  const body = {};
+  const body: Record<string, string> = {};
   if (code) body.code = code;
   if (currentStation) body.currentStation = currentStation;
   if (unlockCode) body.unlockCode = unlockCode;
@@ -445,6 +514,10 @@ async function getUserByIdFlow() {
   if (status === 200) {
     console.log("\n----- USUARIO -----");
     const u = data.user;
+    if (!u) {
+      print(data);
+      return;
+    }
     console.log(`ID: ${u._id}`);
     console.log(`Nombre: ${u.name} ${u.lastName}`);
     console.log(`Email: ${u.email}`);
@@ -462,7 +535,7 @@ async function updateUserFlow() {
   const email = await ask("Nuevo email (Enter = no cambiar): ");
   const password = await ask("Nueva contraseña (Enter = no cambiar): ");
 
-  const body = {};
+  const body: Record<string, string> = {};
   if (name) body.name = name;
   if (lastName) body.lastName = lastName;
   if (email) body.email = email;
@@ -507,14 +580,15 @@ async function registerUser() {
   });
 
   if (status === 201) {
-    console.log(`\nUsuario creado correctamente. ID: ${data.user._id}\n`);
+    console.log(`\nUsuario creado correctamente. ID: ${data.user?._id}\n`);
   } else {
     print(data);
   }
 }
 
 async function viewProfile() {
-  if (!currentUser) {
+  const user = currentUser;
+  if (!user) {
     console.log("No hay sesión activa.\n");
     return;
   }
@@ -524,7 +598,7 @@ async function viewProfile() {
     print(data);
     return;
   }
-  const me = (data.users || []).find((u) => u.email === currentUser.email);
+  const me = (data.users || []).find((u) => u.email === user.email);
   if (me) {
     console.log("\n----- MI PERFIL -----");
     console.log(`Nombre: ${me.name} ${me.lastName}`);
@@ -574,4 +648,3 @@ async function mainMenu() {
 console.log("Conectando a la API en: " + API_URL);
 console.log("Asegúrate de que el servidor esté corriendo con `npm start`.\n");
 mainMenu();
-

@@ -1,6 +1,16 @@
-const mongoose = require("mongoose");
+import { model, Schema } from "mongoose";
 
-const bicycleSchema = new mongoose.Schema(
+type BicycleStatus = "AVAILABLE" | "IN_USE" | "NOT_SUITABLE";
+
+interface BicycleFields {
+  code: string;
+  currentStation: string;
+  status: BicycleStatus;
+  unlockCode: string;
+  rentedBy: string | null;
+}
+
+const bicycleSchema = new Schema<BicycleFields>(
   {
     code: {
       type: String,
@@ -34,4 +44,6 @@ const bicycleSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Bicycle", bicycleSchema);
+const Bicycle = model<BicycleFields>("Bicycle", bicycleSchema);
+
+export = Bicycle;

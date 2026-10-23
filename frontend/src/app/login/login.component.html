@@ -1,0 +1,28 @@
+<div class="login-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>🚲 Iniciar Sesión</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>DNI</mat-label>
+        <input matInput [(ngModel)]="dni" placeholder="40123456" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Contraseña</mat-label>
+        <input matInput type="password" [(ngModel)]="password" />
+      </mat-form-field>
+
+      <p class="error" *ngIf="error">{{ error }}</p>
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-raised-button color="primary" (click)="login()" [disabled]="cargando" class="full-width">
+        {{ cargando ? 'Ingresando...' : 'Ingresar' }}
+      </button>
+    </mat-card-actions>
+    <mat-card-footer>
+      <p class="centro">¿No tenés cuenta? <a routerLink="/registro">Registrate</a></p>
+    </mat-card-footer>
+  </mat-card>
+</div>
