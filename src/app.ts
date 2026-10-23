@@ -1,68 +1,45 @@
-import express from 'express';
-import { MongoClient, Db } from 'mongodb';
-import { BicicletaRoutes } from './bicicleta/bicicleta.routes';
-import { BicicletaService } from './bicicleta/bicicleta.service';
-import { BicicletaController } from './bicicleta/bicicleta.controller';
-import { BicicletaRepositoryMongo } from './bicicleta/bicicleta.repository.mongo';
-import { UsuarioRoutes } from './usuario/usuario.routes';
-import { UsuarioService } from './usuario/usuario.service';
-import { UsuarioController } from './usuario/usuario.controller';
-import { UsuarioRepositoryMongo } from './usuario/usuario.repository.mongo';
-import { EstacionRoutes } from './estacion/estacion.routes';
-import { EstacionService } from './estacion/estacion.service';
-import { EstacionController } from './estacion/estacion.controller';
-import { EstacionRepositoryMongo } from './estacion/estacion.repository.mongo';
+import cors from "cors";
+import express, { Express } from "express";
+import { Db } from "mongodb";
+import { createBicycleRoutes } from "./bicycles/bicycle.routes";
+import { EstacionRoutes } from "./estacion/estacion.routes";
+import { EstacionController } from "./estacion/estacion.controller";
+import { EstacionRepositoryMongo } from "./estacion/estacion.repository.mongo";
+import { EstacionService } from "./estacion/estacion.service";
+import { BicicletaRepositoryMongo } from "./bicycles/bicicleta.repository.mongo";
+import { createMaintenanceRoutes } from "./maintenance/maintenance.routes";
+import { createUserRoutes } from "./users/user.routes";
 
-export class App {
+export function createApp(db: Db): Express {
+  const app = express();
+  app.use(cors());
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
 
-    public readonly app;
-    private client!: MongoClient;
-    private db!: Db;
+  const bicycleRepository = new BicicletaRepositoryMongo(db);
+  const stationRepository = new EstacionRepositoryMongo(db);
+  const stationService = new EstacionService(stationRepository, bicycleRepository);
+  const stationController = new EstacionController(stationService);
+  const stationRoutes = new EstacionRoutes(stationController);
 
-    constructor() {
-        this.app = express();
-        this.app.use(express.json());
-        this.app.use(express.urlencoded({ extended: true }));
-    }
+  app.get("/", (_req, res) => {
+    res.json({
+      message: "Bike rental API is running",
+      version: "1.0.0",
+      endpoints: {
+        api: "/api",
+        bicycles: "/api/bicycles",
+        maintenance: "/api/maintenance",
+        users: "/api/users",
+        stations: "/api/estaciones",
+      },
+    });
+  });
 
-    public async start(): Promise<void> {
-        const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017';
-        const dbName = process.env.MONGO_DB_NAME || 'bicicletas_db';
+  app.use("/api", createBicycleRoutes(db));
+  app.use("/api", stationRoutes.router);
+  app.use("/api/maintenance", createMaintenanceRoutes(db));
+  app.use("/api/users", createUserRoutes(db));
 
-        this.client = new MongoClient(mongoUri);
-        await this.client.connect();
-        this.db = this.client.db(dbName);
-        console.log(`Conectado a MongoDB (${dbName})`);
-
-        this.setupRoutes();
-
-        this.app.listen(3000, () => {
-            console.log('Server is running on port 3000');
-        });
-    }
-
-    private setupRoutes(): void {
-        const bicicletaRepository = new BicicletaRepositoryMongo(this.db);
-        const bicicletaService = new BicicletaService(bicicletaRepository);
-        const bicicletaController = new BicicletaController(bicicletaService);
-        const bicicletaRoutes = new BicicletaRoutes(bicicletaController);
-
-        const usuarioRepository = new UsuarioRepositoryMongo(this.db);
-        const usuarioService = new UsuarioService(usuarioRepository);
-        const usuarioController = new UsuarioController(usuarioService);
-        const usuarioRoutes = new UsuarioRoutes(usuarioController);
-
-        const estacionRepository = new EstacionRepositoryMongo(this.db);
-        const estacionService = new EstacionService(estacionRepository, bicicletaRepository);
-        const estacionController = new EstacionController(estacionService);
-        const estacionRoutes = new EstacionRoutes(estacionController);
-
-        this.app.use('/api', bicicletaRoutes.router);
-        this.app.use('/api', usuarioRoutes.router);
-        this.app.use('/api', estacionRoutes.router);
-    }
-
-    public async close(): Promise<void> {
-        await this.client.close();
-    }
+  return app;
 }

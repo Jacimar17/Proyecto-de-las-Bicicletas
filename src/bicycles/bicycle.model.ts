@@ -1,49 +1,12 @@
-import { model, Schema } from "mongoose";
+export type BicycleStatus = "AVAILABLE" | "IN_USE" | "NOT_SUITABLE";
 
-type BicycleStatus = "AVAILABLE" | "IN_USE" | "NOT_SUITABLE";
-
-interface BicycleFields {
+export interface Bicycle {
+  _id?: string;
   code: string;
   currentStation: string;
   status: BicycleStatus;
   unlockCode: string;
   rentedBy: string | null;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
-
-const bicycleSchema = new Schema<BicycleFields>(
-  {
-    code: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
-    currentStation: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    status: {
-      type: String,
-      enum: ["AVAILABLE", "IN_USE", "NOT_SUITABLE"],
-      default: "AVAILABLE",
-    },
-    unlockCode: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    rentedBy: {
-      type: String,
-      default: null,
-      trim: true,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
-
-const Bicycle = model<BicycleFields>("Bicycle", bicycleSchema);
-
-export = Bicycle;

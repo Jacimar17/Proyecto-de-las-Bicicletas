@@ -10,11 +10,6 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": [
-    "menu.ts",
-    "src/bicycles/**/*.ts",
-    "src/estacion/estacion.entity.ts",
-    "src/estacion/estacion.repository.interface.ts",
-    "src/estacion/estacion.service.ts"
-  ]
+  "include": ["menu.ts", "server.ts", "src/**/*.ts"],
+  "exclude": ["node_modules", "frontend", "dist"]
 }
