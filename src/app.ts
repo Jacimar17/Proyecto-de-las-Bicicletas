@@ -40,6 +40,7 @@ export function createApp(db: Db): Express {
   app.use("/api", stationRoutes.router);
   app.use("/api/maintenance", createMaintenanceRoutes(db));
   app.use("/api/users", createUserRoutes(db));
+  app.use("/api/usuario", createUserRoutes(db));
 
   return app;
 }
