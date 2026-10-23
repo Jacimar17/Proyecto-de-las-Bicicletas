@@ -179,8 +179,21 @@ test("user listing requires authentication and only admins can update accounts",
       authorization: `Bearer ${adminToken}`,
       "content-type": "application/json",
     },
-    body: JSON.stringify({ name: "Lin Updated" }),
+    body: JSON.stringify({ name: "Lin Updated", password: "new-secret123" }),
   });
   assert.equal(updated.status, 200);
   assert.equal((await updated.json()).user.name, "Lin Updated");
+
+  const oldPassword = await fetch(`${baseUrl}/api/users/login`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email: "lin@example.com", password: "secret123" }),
+  });
+  const newPassword = await fetch(`${baseUrl}/api/users/login`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email: "lin@example.com", password: "new-secret123" }),
+  });
+  assert.equal(oldPassword.status, 401);
+  assert.equal(newPassword.status, 200);
 });

@@ -5,10 +5,13 @@ import jwt from "jsonwebtoken";
 import { User, UserRole } from "./user.model";
 import { UserDocument, UserRepositoryMongo } from "./user.repository.mongo";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function requestBody(req: Request): Record<string, unknown> {
-  return typeof req.body === "object" && req.body !== null && !Array.isArray(req.body)
-    ? req.body as Record<string, unknown>
-    : {};
+  const body: unknown = req.body;
+  return isRecord(body) ? body : {};
 }
 
 function publicUser(user: UserDocument): Omit<User, "password"> & { _id: string } {
@@ -34,6 +37,15 @@ function duplicateKey(error: unknown): boolean {
   return error instanceof MongoServerError && error.code === 11000;
 }
 
+function sendError(
+  res: Response,
+  status: number,
+  mensaje: string,
+  details: Record<string, unknown> = {}
+): void {
+  res.status(status).json({ ok: false, mensaje, message: mensaje, ...details });
+}
+
 export class UserController {
   constructor(private readonly users: UserRepositoryMongo) {}
 
@@ -47,19 +59,17 @@ export class UserController {
     const dni = typeof body.dni === "string" ? body.dni.trim() : "";
 
     if (!name || !email || !/^\S+@\S+\.\S+$/.test(email) || password.length < 6) {
-      res.status(400).json({
-        ok: false,
-        mensaje: "Nombre, email válido y contraseña de al menos 6 caracteres son obligatorios",
-      });
+      sendError(
+        res,
+        400,
+        "Nombre, email válido y contraseña de al menos 6 caracteres son obligatorios"
+      );
       return;
     }
 
     try {
       if ((await this.users.findByEmail(email)) || (dni && (await this.users.findByDni(dni)))) {
-        res.status(409).json({
-          ok: false,
-          mensaje: "Ya existe un usuario registrado con ese email o DNI",
-        });
+        sendError(res, 409, "Ya existe un usuario registrado con ese email o DNI");
         return;
       }
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -85,14 +95,10 @@ export class UserController {
       );
     } catch (error: unknown) {
       if (duplicateKey(error)) {
-        res.status(409).json({ ok: false, mensaje: "Email o DNI ya registrado" });
+        sendError(res, 409, "Email o DNI ya registrado");
         return;
       }
-      res.status(500).json({
-        ok: false,
-        mensaje: "Error al crear el usuario",
-        error: errorMessage(error),
-      });
+      sendError(res, 500, "Error al crear el usuario", { error: errorMessage(error) });
     }
   };
 
@@ -105,40 +111,32 @@ export class UserController {
         users: users.map(publicUser),
       });
     } catch (error: unknown) {
-      res.status(500).json({
-        ok: false,
-        mensaje: "Error al obtener los usuarios",
-        error: errorMessage(error),
-      });
+      sendError(res, 500, "Error al obtener los usuarios", { error: errorMessage(error) });
     }
   };
 
   getById = async (req: Request, res: Response): Promise<void> => {
     const id = req.params.id;
     if (typeof id !== "string" || !ObjectId.isValid(id)) {
-      res.status(400).json({ ok: false, mensaje: "ID de usuario no válido" });
+      sendError(res, 400, "ID de usuario no válido");
       return;
     }
     try {
       const user = await this.users.findById(id);
       if (!user) {
-        res.status(404).json({ ok: false, mensaje: "Usuario no encontrado" });
+        sendError(res, 404, "Usuario no encontrado");
         return;
       }
       res.status(200).json({ ok: true, user: publicUser(user) });
     } catch (error: unknown) {
-      res.status(500).json({
-        ok: false,
-        mensaje: "Error al obtener el usuario",
-        error: errorMessage(error),
-      });
+      sendError(res, 500, "Error al obtener el usuario", { error: errorMessage(error) });
     }
   };
 
   update = async (req: Request, res: Response): Promise<void> => {
     const id = req.params.id;
     if (typeof id !== "string" || !ObjectId.isValid(id)) {
-      res.status(400).json({ ok: false, mensaje: "ID de usuario no válido" });
+      sendError(res, 400, "ID de usuario no válido");
       return;
     }
     const body = requestBody(req);
@@ -146,7 +144,7 @@ export class UserController {
     const nameValue = body.name ?? body.nombre;
     if (nameValue !== undefined) {
       if (typeof nameValue !== "string" || !nameValue.trim()) {
-        res.status(400).json({ ok: false, mensaje: "El nombre no es válido" });
+        sendError(res, 400, "El nombre no es válido");
         return;
       }
       updates.name = nameValue.trim();
@@ -154,55 +152,57 @@ export class UserController {
     }
     if (body.lastName !== undefined) {
       if (typeof body.lastName !== "string") {
-        res.status(400).json({ ok: false, mensaje: "El apellido no es válido" });
+        sendError(res, 400, "El apellido no es válido");
         return;
       }
       updates.lastName = body.lastName.trim();
     }
     if (body.email !== undefined) {
       if (typeof body.email !== "string" || !/^\S+@\S+\.\S+$/.test(body.email.trim())) {
-        res.status(400).json({ ok: false, mensaje: "El email no es válido" });
+        sendError(res, 400, "El email no es válido");
         return;
       }
       updates.email = body.email.trim().toLowerCase();
     }
     if (body.dni !== undefined) {
       if (typeof body.dni !== "string" || !body.dni.trim()) {
-        res.status(400).json({ ok: false, mensaje: "El DNI no es válido" });
+        sendError(res, 400, "El DNI no es válido");
         return;
       }
       updates.dni = body.dni.trim();
     }
     if (body.password !== undefined) {
       if (typeof body.password !== "string" || body.password.length < 6) {
-        res.status(400).json({ ok: false, mensaje: "La contraseña debe tener al menos 6 caracteres" });
+        sendError(res, 400, "La contraseña debe tener al menos 6 caracteres");
         return;
       }
-      updates.password = await bcrypt.hash(body.password, 10);
     }
-    if (Object.keys(updates).length === 0) {
-      res.status(400).json({ ok: false, mensaje: "Debe enviar campos para actualizar" });
+    if (Object.keys(updates).length === 0 && body.password === undefined) {
+      sendError(res, 400, "Debe enviar campos para actualizar");
       return;
     }
 
     try {
+      if (typeof body.password === "string") {
+        updates.password = await bcrypt.hash(body.password, 10);
+      }
       if (updates.email) {
         const existingEmail = await this.users.findByEmail(updates.email);
         if (existingEmail && existingEmail._id.toString() !== id) {
-          res.status(409).json({ ok: false, mensaje: "Email ya registrado" });
+          sendError(res, 409, "Email ya registrado");
           return;
         }
       }
       if (updates.dni) {
         const existingDni = await this.users.findByDni(updates.dni);
         if (existingDni && existingDni._id.toString() !== id) {
-          res.status(409).json({ ok: false, mensaje: "DNI ya registrado" });
+          sendError(res, 409, "DNI ya registrado");
           return;
         }
       }
       const user = await this.users.update(id, updates);
       if (!user) {
-        res.status(404).json({ ok: false, mensaje: "Usuario no encontrado" });
+        sendError(res, 404, "Usuario no encontrado");
         return;
       }
       res.status(200).json({
@@ -212,36 +212,28 @@ export class UserController {
       });
     } catch (error: unknown) {
       if (duplicateKey(error)) {
-        res.status(409).json({ ok: false, mensaje: "Email o DNI ya registrado" });
+        sendError(res, 409, "Email o DNI ya registrado");
         return;
       }
-      res.status(500).json({
-        ok: false,
-        mensaje: "Error al actualizar el usuario",
-        error: errorMessage(error),
-      });
+      sendError(res, 500, "Error al actualizar el usuario", { error: errorMessage(error) });
     }
   };
 
   delete = async (req: Request, res: Response): Promise<void> => {
     const id = req.params.id;
     if (typeof id !== "string" || !ObjectId.isValid(id)) {
-      res.status(400).json({ ok: false, mensaje: "ID de usuario no válido" });
+      sendError(res, 400, "ID de usuario no válido");
       return;
     }
     try {
       const deleted = await this.users.delete(id);
       if (!deleted) {
-        res.status(404).json({ ok: false, mensaje: "Usuario no encontrado" });
+        sendError(res, 404, "Usuario no encontrado");
         return;
       }
       res.status(200).json({ ok: true, mensaje: "Usuario eliminado correctamente" });
     } catch (error: unknown) {
-      res.status(500).json({
-        ok: false,
-        mensaje: "Error al eliminar el usuario",
-        error: errorMessage(error),
-      });
+      sendError(res, 500, "Error al eliminar el usuario", { error: errorMessage(error) });
     }
   };
 
@@ -249,7 +241,7 @@ export class UserController {
     const body = requestBody(req);
     const password = typeof body.password === "string" ? body.password : "";
     if (!password) {
-      res.status(400).json({ ok: false, mensaje: "La contraseña es obligatoria" });
+      sendError(res, 400, "La contraseña es obligatoria");
       return;
     }
 
@@ -257,10 +249,7 @@ export class UserController {
     const dni = typeof body.dni === "string" ? body.dni.trim() : "";
     const name = typeof body.name === "string" ? body.name.trim() : "";
     if (!email && !dni && !name) {
-      res.status(400).json({
-        ok: false,
-        mensaje: "Debes proporcionar email, DNI o nombre junto con la contraseña",
-      });
+      sendError(res, 400, "Debes proporcionar email, DNI o nombre junto con la contraseña");
       return;
     }
 
@@ -271,13 +260,13 @@ export class UserController {
           ? await this.users.findByDni(dni)
           : await this.users.findByName(name);
       if (!user || !(await bcrypt.compare(password, user.password))) {
-        res.status(401).json({ ok: false, mensaje: "Credenciales incorrectas" });
+        sendError(res, 401, "Credenciales incorrectas");
         return;
       }
 
       const secret = process.env.JWT_SECRET;
       if (!secret) {
-        res.status(500).json({ ok: false, mensaje: "JWT_SECRET no está configurado" });
+        sendError(res, 500, "JWT_SECRET no está configurado");
         return;
       }
       const role: UserRole = user.role === "admin" ? "admin" : "cliente";
@@ -304,11 +293,7 @@ export class UserController {
             }
       );
     } catch (error: unknown) {
-      res.status(500).json({
-        ok: false,
-        mensaje: "Error al iniciar sesión",
-        error: errorMessage(error),
-      });
+      sendError(res, 500, "Error al iniciar sesión", { error: errorMessage(error) });
     }
   };
 }

@@ -299,10 +299,11 @@ export class BicycleController {
       }
       updates.estado = req.body.estado;
     }
-    if (
-      req.body.estacion_id !== undefined &&
-      (typeof req.body.estacion_id === "string" || req.body.estacion_id === null)
-    ) {
+    if (req.body.estacion_id !== undefined) {
+      if (typeof req.body.estacion_id !== "string" && req.body.estacion_id !== null) {
+        res.status(400).json({ message: "La estación asignada no es válida" });
+        return;
+      }
       updates.estacion_id = req.body.estacion_id;
     }
     if (Object.keys(updates).length === 0) {
