@@ -1,3 +1,5 @@
+export type RolUsuario = 'admin' | 'cliente' | 'tecnico';
+
 export interface Usuario {
     id?: string;
     dni: string;
@@ -5,7 +7,7 @@ export interface Usuario {
     email: string;
     password: string;
     bloqueado: boolean;
-    role: 'admin' | 'cliente';
+    role: RolUsuario;
     createdAt?: Date;
     updatedAt?: Date;
 }

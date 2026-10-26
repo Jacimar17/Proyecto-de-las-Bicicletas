@@ -1,4 +1,4 @@
-import { Bicicleta } from './bicicleta.entity';
+import { Bicicleta, EstadoBicicleta } from './bicicleta.entity';
 
 export interface BicicletaRepository {
     findAll(): Promise<Bicicleta[]>;
@@ -7,5 +7,6 @@ export interface BicicletaRepository {
     findByEstacion(estacion_id: string): Promise<Bicicleta[]>;
     create(bicicleta: Bicicleta): Promise<Bicicleta>;
     update(id: string, bicicleta: Partial<Bicicleta>): Promise<Bicicleta | null>;
+    updateIfEstado(id: string, estado: EstadoBicicleta, bicicleta: Partial<Bicicleta>): Promise<Bicicleta | null>;
     delete(id: string): Promise<boolean>;
 }

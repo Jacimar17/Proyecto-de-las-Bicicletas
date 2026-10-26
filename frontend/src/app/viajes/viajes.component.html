@@ -1,0 +1,39 @@
+<main class="viajes-container">
+  <h1>Mis viajes</h1>
+  <p class="error" *ngIf="error" role="alert">{{ error }}</p>
+  <p *ngIf="cargando">Cargando historial...</p>
+
+  <section class="activo" *ngIf="viajeActivo">
+    <h2>Viaje en curso</h2>
+    <p>Bicicleta: <strong>{{ codigoBicicleta(viajeActivo.bicicleta_id) }}</strong></p>
+    <p>Origen: {{ nombreEstacion(viajeActivo.estacion_origen_id) }}</p>
+    <p>Inicio: {{ viajeActivo.fecha_inicio | date:'medium' }}</p>
+    <p>Para devolverla en una estación habilitada, utiliza el mapa.</p>
+    <a routerLink="/mapa">Ir al mapa para devolver</a>
+  </section>
+
+  <h2>Historial de viajes</h2>
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th>Bicicleta</th><th>Origen</th><th>Destino</th><th>Inicio</th><th>Finalización</th><th>Estado</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let viaje of historial">
+          <td>{{ codigoBicicleta(viaje.bicicleta_id) }}</td>
+          <td>{{ nombreEstacion(viaje.estacion_origen_id) }}</td>
+          <td>{{ nombreEstacion(viaje.estacion_destino_id) }}</td>
+          <td>{{ viaje.fecha_inicio | date:'medium' }}</td>
+          <td>{{ viaje.fecha_fin ? (viaje.fecha_fin | date:'medium') : '—' }}</td>
+          <td>{{ viaje.fecha_fin ? 'Finalizado' : 'En curso' }}</td>
+        </tr>
+        <tr *ngIf="!cargando && historial.length === 0"><td colspan="6">Todavía no tienes viajes registrados.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Estaciones</h2>
+  <ul>
+    <li *ngFor="let estacion of estaciones">
+      {{ estacion.nombre }} — {{ estacion.activa ? (estacion.disponibles + ' bicicletas disponibles') : 'No habilitada' }}
+    </li>
+  </ul>
+</main>

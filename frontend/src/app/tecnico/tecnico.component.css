@@ -1,0 +1,53 @@
+.tecnico-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.tabla-wrap {
+  overflow-x: auto;
+  margin: 20px 0 36px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-bottom: 1px solid #d5dce2;
+  padding: 10px;
+  text-align: left;
+}
+
+.acciones {
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  border: 0;
+  border-radius: 4px;
+  padding: 8px 10px;
+  background: #1976d2;
+  color: white;
+  cursor: pointer;
+}
+
+button.warning {
+  background: #b26a00;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: .5;
+}
+
+.error {
+  color: #b71c1c;
+}
+
+.success {
+  color: #1b5e20;
+}

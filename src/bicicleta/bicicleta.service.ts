@@ -2,7 +2,9 @@ import { Bicicleta, EstadoBicicleta } from './bicicleta.entity';
 import { BicicletaRepository } from './bicicleta.repository.interface';
 import { EstacionRepository } from '../estacion/estacion.repository.interface';
 
-const ESTADOS: EstadoBicicleta[] = ['DISPONIBLE', 'RESERVADA', 'EN_USO', 'APTA', 'NO_APTA'];
+const ESTADOS: EstadoBicicleta[] = [
+    'DISPONIBLE', 'RESERVADA', 'EN_USO', 'EN_MANTENIMIENTO', 'APTA', 'NO_APTA'
+];
 
 export class BicicletaService {
     constructor(
@@ -39,6 +41,11 @@ export class BicicletaService {
     }
 
     async delete(id: string): Promise<void> {
+        const bicicleta = await this.repository.findById(id);
+        if (!bicicleta) throw new Error('Bicicleta no encontrada');
+        if (bicicleta.estado === 'EN_USO' || bicicleta.estado === 'RESERVADA') {
+            throw new Error('No se puede eliminar una bicicleta en uso o reservada');
+        }
         if (!await this.repository.delete(id)) throw new Error('Bicicleta no encontrada');
     }
 

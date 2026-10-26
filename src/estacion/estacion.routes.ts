@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { EstacionController } from './estacion.controller';
+import { requerirRol, verificarToken } from '../usuario/auth.middleware';
 
 export class EstacionRoutes {
 
@@ -13,8 +14,8 @@ export class EstacionRoutes {
     private routes(): void {
         this.router.get('/estaciones', this.controller.getAll);
         this.router.get('/estacion/:id', this.controller.getById);
-        this.router.post('/estacion', this.controller.create);
-        this.router.put('/estacion/:id', this.controller.update);
-        this.router.delete('/estacion/:id', this.controller.delete);
+        this.router.post('/estacion', verificarToken, requerirRol('admin'), this.controller.create);
+        this.router.put('/estacion/:id', verificarToken, requerirRol('admin'), this.controller.update);
+        this.router.delete('/estacion/:id', verificarToken, requerirRol('admin'), this.controller.delete);
     }
 }
