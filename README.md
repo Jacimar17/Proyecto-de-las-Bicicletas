@@ -1,45 +1,63 @@
-# Proyecto de bicicletas
+# Sistema de Alquiler de Bicicletas Urbanas
 
-API y menú de consola desarrollados en TypeScript, con MongoDB Atlas mediante el driver oficial `mongodb`.
+Aplicación con API REST Express/TypeScript, MongoDB Atlas, menú de consola y frontend Angular.
 
-## Configuración
+## Requisitos y configuración
 
-Instala dependencias con `npm install` y define estas variables en un archivo `.env` local:
+Usa Node.js y npm, una instancia de MongoDB y las variables de entorno siguientes en un archivo `.env` local:
 
 ```text
-MONGO_URI=<cadena de conexión de MongoDB Atlas>
+MONGO_URI=<cadena de conexión de MongoDB>
 MONGO_DB_NAME=bicicletas_db
-JWT_SECRET=<secreto para firmar tokens>
+JWT_SECRET=<secreto privado para firmar tokens>
 PORT=3000
 ```
 
-No subas el archivo `.env` al repositorio.
+No publiques `.env`. Instala las dependencias raíz con `npm install` y las del frontend desde `frontend/` con `npm install`.
 
 ## Comandos
 
-- `npm run build`: verifica tipos de la API, el menú y las pruebas.
-- `npm test`: ejecuta las pruebas de endpoints y del menú TypeScript.
+- `npm run build`: verifica tipos de API, menú y pruebas.
+- `npm test`: ejecuta pruebas del servidor, endpoints y flujos de alquiler/mantenimiento.
 - `npm start`: inicia la API.
+- `npm run dev`: inicia la API en desarrollo.
 - `npm run menu`: inicia el menú de consola.
-- `npm run seed`: crea estaciones y bicicletas de ejemplo que todavía no existan; no elimina ni sobrescribe datos existentes.
+- `npm run seed`: agrega estaciones y bicicletas de ejemplo que todavía no existan; no borra datos actuales.
+- Desde `frontend/`: `npm start` inicia Angular; `npm test -- --watch=false` ejecuta sus pruebas.
 
-## Endpoints
+El seed usa MongoDB URI desde `.env`, crea estaciones con coordenadas y evita duplicar bicicletas mediante sus códigos existentes.
 
-- Bicicletas: `/api/bicycles` y `/api/bicicletas`.
-- Mantenimiento: `/api/maintenance`.
-- Estaciones: `/api/estaciones` y `/api/estacion`.
-- Usuarios y autenticación: `/api/users` y `/api/usuario`.
+## Roles e historias
 
-Las operaciones protegidas requieren `Authorization: Bearer <token>`. Las acciones de mantenimiento y administración de usuarios requieren un usuario con rol `admin`.
+- **Cliente:** registro, inicio de sesión, disponibilidad por estación, alquiler, devolución en cualquier estación habilitada e historial personal.
+- **Administrador:** CRUD de usuarios, bicicletas y estaciones.
+- **Técnico:** consultar bicicletas y actualizar a `DISPONIBLE` o `EN_MANTENIMIENTO`; el sistema registra estado anterior/nuevo, fecha y responsable.
 
-## Ramas de trabajo
+Las rutas protegidas requieren `Authorization: Bearer <token>`. El registro público siempre crea usuarios cliente; solo un administrador puede asignar roles privilegiados.
 
-- `main`: base integrada y validada.
-- `users`: autenticación y endpoints de usuario.
-- `feature/bicycles-endpoints`: endpoints de bicicletas.
-- `feature/stations-endpoints`: endpoints de estaciones.
-- `feature/maintenance-endpoints`: endpoints de mantenimiento.
-- `feature/menu-typescript`: menú TypeScript y su validación.
-- `feature/typescript-core`: servidor TypeScript y conexión común a Atlas.
+## Endpoints del sistema
 
-Las ramas de recursos parten de la base común de TypeScript y pueden usarse para coordinar cambios por área.
+Los endpoints en español alimentan la aplicación Angular:
+
+| Método | Endpoint | Acceso | Función |
+| --- | --- | --- | --- |
+| `POST` | `/api/usuario/registro` | Público | Registrar un cliente |
+| `POST` | `/api/usuario/login` | Público | Iniciar sesión y obtener JWT |
+| `GET` | `/api/estaciones` | Público | Ver estaciones y disponibilidad |
+| `GET` | `/api/estacion/:id` | Público | Ver una estación y sus bicicletas |
+| `GET` | `/api/bicicletas` | Público | Consultar bicicletas |
+| `GET/POST/PUT/DELETE` | `/api/usuario[/:id]` | Administrador | CRUD de usuarios |
+| `POST/PUT/DELETE` | `/api/bicicleta[/:id]` | Administrador | CRUD de bicicletas |
+| `POST/PUT/DELETE` | `/api/estacion[/:id]` | Administrador | CRUD de estaciones |
+| `GET` | `/api/viajes` | Cliente | Consultar historial propio |
+| `GET` | `/api/viajes/activo` | Cliente | Consultar viaje en curso |
+| `POST` | `/api/viajes` | Cliente | Iniciar con `bicicleta_id` y `estacion_origen_id` |
+| `PATCH` | `/api/viajes/activo/finalizar` | Cliente | Devolver con `estacion_destino_id` |
+| `GET` | `/api/mantenimientos` | Administrador/técnico | Consultar actualizaciones de mantenimiento |
+| `POST` | `/api/mantenimientos` | Técnico | Actualizar con `bicicleta_id` y `estado` |
+
+El sistema mantiene además rutas inglesas para las funcionalidades heredadas (`/api/bicycles`, `/api/maintenance`, `/api/users`). Esas rutas heredadas utilizan las colecciones inglesas existentes; las rutas nuevas en español utilizan `bicicletas`, `estaciones`, `usuarios`, `viajes` y `mantenimientos`.
+
+## División de trabajo
+
+Consulta [TEAM_ENDPOINTS.md](./TEAM_ENDPOINTS.md) para el reparto por responsables, archivos, endpoints y ramas sugeridas.

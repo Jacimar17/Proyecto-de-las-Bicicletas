@@ -1,10 +1,11 @@
 import "dotenv/config";
 import { Server } from "node:http";
-import { createApp } from "./src/app";
+import { createApp, ensureApplicationIndexes } from "./src/app";
 import { connectDB } from "./src/config/db";
 
 async function startServer(): Promise<void> {
   const { client, db } = await connectDB();
+  await ensureApplicationIndexes(db);
   const app = createApp(db);
   const port = Number(process.env.PORT || 3000);
   const server: Server = app.listen(port, () => {

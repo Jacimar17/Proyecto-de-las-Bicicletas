@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { roleGuard } from './shared/auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'mapa', pathMatch: 'full' },
@@ -16,7 +17,18 @@ export const routes: Routes = [
   },
   {
     path: 'admin',
+    canActivate: [roleGuard(['admin'])],
     loadComponent: () => import('./admin/admin.component').then(m => m.AdminComponent)
+  },
+  {
+    path: 'tecnico',
+    canActivate: [roleGuard(['tecnico'])],
+    loadComponent: () => import('./tecnico/tecnico.component').then(m => m.TecnicoComponent)
+  },
+  {
+    path: 'viajes',
+    canActivate: [roleGuard(['cliente'])],
+    loadComponent: () => import('./viajes/viajes.component').then(m => m.ViajesComponent)
   },
   { path: '**', redirectTo: 'mapa' }
 ];

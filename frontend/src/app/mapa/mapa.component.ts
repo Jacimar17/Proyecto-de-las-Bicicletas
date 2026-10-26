@@ -1,103 +1,171 @@
 import { Component, AfterViewInit, OnDestroy } from '@angular/core';
 import * as L from 'leaflet';
-import { EstacionService, Estacion } from '../shared/services/estacion.service';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommonModule } from '@angular/common';
-
-const COORDENADAS_ESTACIONES: Record<string, L.LatLngTuple> = {
-  Centro: [-33.7456, -61.9688],
-  'San Martín': [-33.742, -61.972],
-  Belgrano: [-33.75, -61.964],
-  'Tiro Federal': [-33.738, -61.956],
-  'Juan XXIII': [-33.755, -61.98]
-};
+import { FormsModule } from '@angular/forms';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { Bicicleta } from '../shared/services/bicicleta.service';
+import { Estacion, EstacionDetalle, EstacionService } from '../shared/services/estacion.service';
+import { UsuarioService } from '../shared/services/usuario.service';
+import { Viaje, ViajeService } from '../shared/services/viaje.service';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-mapa',
   standalone: true,
-  imports: [CommonModule, MatProgressSpinnerModule],
+  imports: [CommonModule, FormsModule, MatProgressSpinnerModule, RouterLink],
   templateUrl: './mapa.component.html',
   styleUrl: './mapa.component.css'
 })
 export class MapaComponent implements AfterViewInit, OnDestroy {
-
   cargando = true;
+  estaciones: Estacion[] = [];
+  estacionIdSeleccionada = '';
+  estacionSeleccionada: EstacionDetalle | null = null;
+  bicicletaId = '';
+  estacionDestinoId = '';
+  viajeActivo: Viaje | null = null;
+  error = '';
+  mensaje = '';
   private map!: L.Map;
+  private readonly marcadores = L.layerGroup();
 
-  constructor(private estacionService: EstacionService) {}
+  constructor(
+    private readonly estacionService: EstacionService,
+    private readonly viajeService: ViajeService,
+    readonly usuarioService: UsuarioService
+  ) {}
+
+  get bicicletasDisponibles(): Bicicleta[] {
+    return this.estacionSeleccionada?.bicicletas.filter(bicicleta => bicicleta.estado === 'DISPONIBLE') ?? [];
+  }
+
+  get esCliente(): boolean {
+    return this.usuarioService.usuarioActual?.role === 'cliente';
+  }
+
+  nombreEstacion(id: string): string {
+    return this.estaciones.find(estacion => estacion.id === id)?.nombre ?? id;
+  }
 
   ngAfterViewInit(): void {
-    this.initMap();
+    this.map = L.map('mapa').setView([-33.7467, -61.9629], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.map);
+    this.marcadores.addTo(this.map);
     this.cargarEstaciones();
+    if (this.esCliente) {
+      this.viajeService.getActive().subscribe({
+        next: viaje => this.viajeActivo = viaje,
+        error: error => this.mostrarError(error)
+      });
+    }
   }
 
   ngOnDestroy(): void {
     this.map?.remove();
   }
 
-  private initMap(): void {
-    this.map = L.map('mapa').setView([-33.7467, -61.9629], 13);
+  seleccionarEstacion(id: string): void {
+    this.estacionIdSeleccionada = id;
+    this.estacionSeleccionada = null;
+    this.bicicletaId = '';
+    if (!id) return;
+    this.estacionService.getById(id).subscribe({
+      next: estacion => {
+        this.estacionSeleccionada = estacion;
+        this.estacionDestinoId = estacion.activa ? estacion.id ?? '' : '';
+      },
+      error: error => this.mostrarError(error)
+    });
+  }
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(this.map);
+  comenzarViaje(): void {
+    if (!this.estacionSeleccionada?.id || !this.bicicletaId) return;
+    this.error = '';
+    this.mensaje = '';
+    this.viajeService.start(this.bicicletaId, this.estacionSeleccionada.id).subscribe({
+      next: viaje => {
+        this.viajeActivo = viaje;
+        this.bicicletaId = '';
+        this.mensaje = 'Viaje iniciado. ¡Buen recorrido!';
+        this.actualizarDisponibilidad();
+      },
+      error: error => this.mostrarError(error)
+    });
+  }
+
+  devolverBicicleta(): void {
+    if (!this.estacionDestinoId) return;
+    this.error = '';
+    this.mensaje = '';
+    this.viajeService.finish(this.estacionDestinoId).subscribe({
+      next: () => {
+        this.viajeActivo = null;
+        this.mensaje = 'Bicicleta devuelta correctamente.';
+        this.actualizarDisponibilidad();
+      },
+      error: error => this.mostrarError(error)
+    });
   }
 
   private cargarEstaciones(): void {
     this.estacionService.getAll().subscribe({
-      next: (estaciones) => {
+      next: estaciones => {
+        this.estaciones = estaciones;
         this.cargando = false;
-        const estacionesConCoordenadas = estaciones.filter(
-          estacion => COORDENADAS_ESTACIONES[estacion.nombre]
-        );
-
-        estacionesConCoordenadas.forEach(estacion => this.agregarMarcador(estacion));
-
-        if (estacionesConCoordenadas.length) {
-          this.map.fitBounds(
-            L.latLngBounds(
-              estacionesConCoordenadas.map(
-                estacion => COORDENADAS_ESTACIONES[estacion.nombre]
-              )
-            ),
-            { padding: [50, 50] }
-          );
+        this.marcadores.clearLayers();
+        estaciones.forEach(estacion => this.agregarMarcador(estacion));
+        const coordenadas = estaciones
+          .filter(estacion => estacion.activa)
+          .map(estacion => [estacion.lat, estacion.lng] as L.LatLngTuple);
+        if (coordenadas.length) {
+          this.map.fitBounds(L.latLngBounds(coordenadas), { padding: [40, 40] });
         }
       },
-      error: (error: unknown) => {
-        console.error('No se pudieron cargar las estaciones', error);
+      error: error => {
         this.cargando = false;
+        this.mostrarError(error);
       }
     });
   }
 
+  private actualizarDisponibilidad(): void {
+    this.cargarEstaciones();
+    if (this.estacionSeleccionada?.id) this.seleccionarEstacion(this.estacionSeleccionada.id);
+  }
+
   private agregarMarcador(estacion: Estacion): void {
     const icono = L.divIcon({
-      html: '<div style="background:#1976d2;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 0 4px rgba(0,0,0,.5);"></div>',
+      html: `<div style="background:${estacion.activa ? '#1976d2' : '#757575'};width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 0 4px rgba(0,0,0,.5);"></div>`,
       className: '',
       iconSize: [24, 24],
       iconAnchor: [12, 12]
     });
 
-    L.marker(COORDENADAS_ESTACIONES[estacion.nombre], { icon: icono })
-      .addTo(this.map)
-      .bindPopup(this.crearPopup(estacion));
+    L.marker([estacion.lat, estacion.lng], { icon: icono })
+      .addTo(this.marcadores)
+      .bindPopup(this.crearPopup(estacion))
+      .on('click', () => this.seleccionarEstacion(estacion.id ?? ''));
   }
 
   private crearPopup(estacion: Estacion): HTMLElement {
     const contenedor = document.createElement('div');
     const titulo = document.createElement('strong');
     titulo.textContent = estacion.nombre;
-
     const direccion = document.createElement('div');
     direccion.textContent = estacion.direccion;
-
     const disponibilidad = document.createElement('div');
     disponibilidad.style.marginTop = '6px';
-    disponibilidad.textContent =
-      `Disponibles: ${estacion.disponibles} de ${estacion.capacidad} bicicletas`;
-
+    disponibilidad.textContent = estacion.activa
+      ? `Disponibles: ${estacion.disponibles} de ${estacion.capacidad} bicicletas`
+      : 'Estación no habilitada';
     contenedor.append(titulo, direccion, disponibilidad);
     return contenedor;
+  }
+
+  private mostrarError(error: { error?: { message?: string } }): void {
+    this.error = error.error?.message ?? 'No se pudo completar la operación';
+    this.mensaje = '';
   }
 }

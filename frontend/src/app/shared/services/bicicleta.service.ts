@@ -7,7 +7,8 @@ export interface Bicicleta {
   codigo: string;
   modelo: string;
   ubicacion: string;
-  estado: 'DISPONIBLE' | 'RESERVADA' | 'EN_USO' | 'APTA' | 'NO_APTA';
+  estado: 'DISPONIBLE' | 'RESERVADA' | 'EN_USO' | 'EN_MANTENIMIENTO' | 'APTA' | 'NO_APTA';
+  estacion_id: string | null;
   fecha_ultima_revision: string | null;
   tecnico_responsable: string | null;
 }

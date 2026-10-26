@@ -1,5 +1,5 @@
 import { Collection, Db, ObjectId } from 'mongodb';
-import { Bicicleta } from './bicicleta.entity';
+import { Bicicleta, EstadoBicicleta } from './bicicleta.entity';
 import { BicicletaRepository } from './bicicleta.repository.interface';
 
 interface BicicletaDocument extends Omit<Bicicleta, 'id'> {
@@ -53,6 +53,20 @@ export class BicicletaRepositoryMongo implements BicicletaRepository {
         const result = await this.collection.findOneAndUpdate(
             { _id: new ObjectId(id) },
             { $set: updateData },
+            { returnDocument: 'after' }
+        );
+        return result ? this.toEntity(result) : null;
+    }
+
+    async updateIfEstado(
+        id: string,
+        estado: EstadoBicicleta,
+        bicicleta: Partial<Bicicleta>
+    ): Promise<Bicicleta | null> {
+        if (!ObjectId.isValid(id)) return null;
+        const result = await this.collection.findOneAndUpdate(
+            { _id: new ObjectId(id), estado },
+            { $set: { ...bicicleta, updatedAt: new Date() } },
             { returnDocument: 'after' }
         );
         return result ? this.toEntity(result) : null;
