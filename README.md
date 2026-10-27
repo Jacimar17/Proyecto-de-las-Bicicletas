@@ -62,6 +62,10 @@ Los endpoints en español alimentan la aplicación Angular:
 
 El sistema mantiene además rutas inglesas para las funcionalidades heredadas (`/api/bicycles`, `/api/maintenance`, `/api/users`). Esas rutas heredadas utilizan las colecciones inglesas existentes; las rutas nuevas en español utilizan `bicicletas`, `estaciones`, `usuarios`, `viajes` y `mantenimientos`.
 
+## Estructura de la API
+
+El backend está organizado por dominio bajo `src/`. Cada módulo mantiene separadas sus rutas, controladores, servicios, interfaces de repositorio, implementación MongoDB y entidad. Las rutas solo conectan endpoints y middleware; los controladores traducen HTTP y los servicios concentran validaciones y reglas de negocio. Esta estructura también se aplica al módulo heredado `src/users/`, que sirve `/api/users` sin duplicar la ruta española `/api/usuario`.
+
 ## División de trabajo
 
 Consulta [TEAM_ENDPOINTS.md](./TEAM_ENDPOINTS.md) para el reparto por responsables, archivos, endpoints y ramas sugeridas.

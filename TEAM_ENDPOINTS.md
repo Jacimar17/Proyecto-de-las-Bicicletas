@@ -18,7 +18,7 @@ Este reparto propone tres áreas de trabajo para Jacinto, Lautaro y Luka. Cada p
 | `PUT` | `/api/usuario/:id` | Modificar usuario (administrador) |
 | `DELETE` | `/api/usuario/:id` | Eliminar usuario (administrador) |
 
-**Área principal:** `src/usuario/` y el flujo de inicio/cierre de sesión y gestión de usuarios en `frontend/src/app/`.
+**Área principal:** `src/usuario/` y el flujo de inicio/cierre de sesión y gestión de usuarios en `frontend/src/app/`. El módulo inglés heredado `src/users/` conserva `/api/users` y sigue la misma separación entre entidad, rutas, controlador, servicio e interfaz/repositorio MongoDB.
 
 **Responsabilidades:** validación de credenciales, roles `cliente`/`admin`/`tecnico`, middleware de autorización y protección de rutas de interfaz. El alta pública debe seguir creando únicamente clientes.
 
@@ -72,3 +72,7 @@ Este reparto propone tres áreas de trabajo para Jacinto, Lautaro y Luka. Cada p
 5. Integrar mediante pull request o merge a `main`; no compartir una rama feature como si fuera la rama principal de trabajo.
 
 Esta división es una propuesta de trabajo, no una restricción: el equipo puede intercambiar responsables, manteniendo los límites de archivos acordados para evitar conflictos.
+
+## Estructura de los módulos del backend
+
+Los módulos bajo `src/` se organizan por dominio. Las rutas enlazan endpoints y middleware con sus controladores; los controladores gestionan HTTP y delegan validaciones y reglas de negocio a servicios; los servicios dependen de interfaces de repositorio, implementadas por sus adaptadores MongoDB, y usan entidades propias del dominio. Las rutas españolas de usuario y las heredadas en inglés se mantienen separadas (`/api/usuario` y `/api/users`) y no comparten montajes duplicados.

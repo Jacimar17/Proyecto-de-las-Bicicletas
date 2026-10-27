@@ -82,7 +82,6 @@ export function createApp(db: Db): Express {
   app.use('/api', createBicycleRoutes(db));
   app.use('/api/maintenance', createMaintenanceRoutes(db));
   app.use('/api/users', createUserRoutes(db));
-  app.use('/api/usuario', createUserRoutes(db));
 
   return app;
 }
