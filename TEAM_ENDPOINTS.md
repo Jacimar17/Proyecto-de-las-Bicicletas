@@ -1,69 +1,67 @@
-# Reparto de historias, endpoints y ramas
+# Reparto de historias, tareas y ramas
 
-Este reparto organiza el trabajo por las tres historias de usuario acordadas. Cada persona debe crear su rama feature desde `main` actualizado y limitar sus cambios al área asignada. Si hace falta tocar un archivo compartido, coordinarlo antes para evitar conflictos.
+Este reparto organiza el trabajo según las historias y criterios de aceptación acordados. Cada persona trabaja en una rama feature propia, creada desde `main` actualizado, y limita sus cambios a su historia. Si hace falta tocar un archivo compartido, coordinarlo antes para evitar conflictos.
 
 ## Historia de Usuario 1 — Nolla: Usuario / Cliente
 
 **Rama sugerida:** `feature/cliente-nolla`
 
-**Rutas**
+**Trabajo asignado**
 
-| Método | Endpoint | Función |
-| --- | --- | --- |
-| `POST` | `/api/usuario/registro` | Registrar un cliente |
-| `POST` | `/api/usuario/login` | Iniciar sesión y obtener JWT |
-| `GET` | `/api/estaciones` | Consultar estaciones y disponibilidad |
-| `GET` | `/api/estacion/:id` | Consultar una estación y sus bicicletas |
-| `GET` | `/api/bicicletas` | Consultar bicicletas disponibles |
-| `GET` | `/api/viajes` | Consultar el historial propio |
-| `GET` | `/api/viajes/activo` | Consultar el viaje en curso |
-| `POST` | `/api/viajes` | Iniciar un viaje con `bicicleta_id` y `estacion_origen_id` |
-| `PATCH` | `/api/viajes/activo/finalizar` | Finalizar el viaje con `estacion_destino_id` |
+- Registrar una cuenta e iniciar sesión.
+- Consultar bicicletas disponibles en una estación.
+- Retirar una bicicleta mediante un código de desbloqueo.
+- Finalizar el viaje y devolver la bicicleta en la misma estación o en otra.
+- Consultar el historial propio de viajes.
 
 **Área principal:** `src/viaje/` y las pantallas de registro, inicio de sesión, mapa y viajes en `frontend/src/app/`.
 
-**Responsabilidades:** registro público como cliente, inicio de sesión, consulta de disponibilidad, inicio y devolución de bicicletas e historial personal. Coordinar con Jacinto cualquier cambio a la autenticación o a los componentes compartidos del frontend.
+**Responsabilidades:** experiencia del cliente para alquileres y viajes. Coordinar con Jacinto la autenticación y con Luka las reglas para excluir bicicletas no aptas.
 
 ## Historia de Usuario 2 — Jacinto: Administrador
 
 **Rama sugerida:** `feature/admin-jacinto`
 
-**Rutas**
+**Trabajo asignado**
 
-| Método | Endpoint | Función |
-| --- | --- | --- |
-| `GET/POST/PUT/DELETE` | `/api/usuario[/:id]` | Administrar usuarios |
-| `POST/PUT/DELETE` | `/api/bicicleta[/:id]` | Administrar bicicletas |
-| `POST/PUT/DELETE` | `/api/estacion[/:id]` | Administrar estaciones |
+- Agregar, modificar y eliminar bicicletas.
+- Cambiar el estado de una bicicleta.
+- Consultar los alquileres activos.
+- Bloquear usuarios.
+- Gestionar usuarios según el alcance del CRUD de usuarios de la API.
 
-**Área principal:** `src/usuario/` para la gestión administrativa de usuarios, `src/bicycles/`, `src/estacion/` y el panel de administración en `frontend/src/app/admin/`.
+**Área principal:** `src/usuario/`, `src/bicycles/`, `src/viaje/` para la consulta de alquileres activos y el panel `frontend/src/app/admin/`.
 
-**Responsabilidades:** operaciones CRUD administrativas, asignación y protección de roles, y gestión de bicicletas y estaciones. El registro público siempre debe crear únicamente usuarios cliente. Coordinar con Nolla cambios en autenticación, middleware y archivos compartidos del frontend.
+**Responsabilidades:** funciones administrativas indicadas en la historia. El registro público siempre debe crear únicamente usuarios cliente. Coordinar con Nolla los cambios de autenticación y con Luka las transiciones de estado de bicicletas. La gestión de estaciones no forma parte de esta historia salvo acuerdo explícito del equipo.
 
 ## Historia de Usuario 3 — Luka: Técnico de Mantenimiento
 
 **Rama sugerida:** `feature/tecnico-luka`
 
-**Rutas**
-
-| Método | Endpoint | Función |
-| --- | --- | --- |
-| `GET` | `/api/mantenimientos` | Consultar registros (administrador o técnico) |
-| `POST` | `/api/mantenimientos` | Actualizar el estado con `bicicleta_id` y `estado` (técnico) |
+**Trabajo asignado**
 
 **Área principal:** `src/mantenimiento/` y `frontend/src/app/tecnico/`.
 
-**Responsabilidades:** consultar bicicletas y actualizar su estado a `DISPONIBLE` o `EN_MANTENIMIENTO`; registrar el estado anterior y nuevo, la fecha y el técnico responsable. Coordinar con Jacinto cualquier cambio a las transiciones de estado o archivos compartidos.
+- Identificar bicicletas mediante su ID.
+- Marcar bicicletas según su condición, incluyendo el estado no apto para uso.
+- Evitar que bicicletas no aptas se ofrezcan para alquiler.
+- Registrar la fecha de revisión y el técnico responsable.
+
+**Responsabilidades:** actualizar el estado de mantenimiento y dejar registro auditable de cada revisión. Coordinar con Jacinto las transiciones de estado y con Nolla la disponibilidad que se muestra al cliente. Los nombres exactos de los estados deben acordarse entre el equipo antes de integrarlos.
+
+## Historia Técnica — API REST
+
+La API debe conectar frontend, backend y base de datos; exponer respuestas JSON y cubrir CRUD de usuarios, CRUD de bicicletas y gestión de viajes. Es trabajo compartido entre las tres historias, no una cuarta rama de una persona: cada responsable implementa los endpoints necesarios para su historia y coordina las interfaces comunes.
 
 ## Integración y trabajo en equipo
 
-1. Partir de `main` actualizado y crear una rama por historia con los nombres sugeridos.
+1. Partir de `main` actualizado y trabajar en la rama asignada a cada persona; no crear ramas adicionales por endpoint sin acordarlo.
 2. Limitar cada cambio al área asignada. Coordinar antes de editar archivos compartidos como `src/app.ts`, `src/usuario/auth.middleware.ts`, `frontend/src/app/app.routes.ts`, `frontend/src/app/app.component.*` o componentes comunes.
 3. Mantener las interfaces API alineadas con esta guía y notificar cambios de payload antes de consumirlos desde otra rama.
 4. Probar la API y el frontend del área antes de integrar; ejecutar builds y pruebas generales al integrar.
 5. Integrar mediante pull request o merge a `main`; no usar `main` como rama de trabajo.
 
-Esta división identifica responsables por historia, pero requiere coordinación cuando una funcionalidad atraviesa áreas.
+Ramas sugeridas: `feature/cliente-nolla`, `feature/admin-jacinto` y `feature/tecnico-luka`. Jacinto debe continuar en `feature/admin-jacinto`; los nombres no implican repartir una misma historia entre varias ramas personales.
 
 ## Estructura de los módulos del backend
 
