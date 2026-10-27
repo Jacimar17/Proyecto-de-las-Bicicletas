@@ -33,9 +33,9 @@ El seed usa MongoDB URI desde `.env`, crea estaciones con coordenadas y evita du
 
 ## Roles e historias
 
-- **Cliente:** registro, inicio de sesión, disponibilidad por estación, alquiler, devolución en cualquier estación habilitada e historial personal.
-- **Administrador:** CRUD de usuarios, bicicletas y estaciones.
-- **Técnico:** consultar bicicletas y actualizar a `DISPONIBLE` o `EN_MANTENIMIENTO`; el sistema registra estado anterior/nuevo, fecha y responsable.
+- **Historia de Usuario 1 — Nolla (Usuario / Cliente):** registro, inicio de sesión, disponibilidad por estación, alquiler, devolución en cualquier estación habilitada e historial personal.
+- **Historia de Usuario 2 — Jacinto (Administrador):** CRUD de usuarios, bicicletas y estaciones.
+- **Historia de Usuario 3 — Luka (Técnico de Mantenimiento):** consultar bicicletas y actualizar a `DISPONIBLE` o `EN_MANTENIMIENTO`; el sistema registra estado anterior/nuevo, fecha y responsable.
 
 Las rutas protegidas requieren `Authorization: Bearer <token>`. El registro público siempre crea usuarios cliente; solo un administrador puede asignar roles privilegiados.
 
