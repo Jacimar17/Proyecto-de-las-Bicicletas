@@ -5,12 +5,18 @@ export interface DatabaseConnection {
   db: Db;
 }
 
-export async function connectDB(): Promise<DatabaseConnection> {
-  const uri = process.env.MONGO_URI;
-  if (!uri) {
-    throw new Error("MONGO_URI must be configured to connect to MongoDB Atlas.");
-  }
+export function getMongoUri(
+  env: Partial<Pick<NodeJS.ProcessEnv, "MONGO_URI" | "DATABASE_URL">> = process.env
+): string {
+  return (
+    env.MONGO_URI?.trim() ||
+    env.DATABASE_URL?.trim() ||
+    "mongodb://127.0.0.1:27017"
+  );
+}
 
+export async function connectDB(): Promise<DatabaseConnection> {
+  const uri = getMongoUri();
   const client = new MongoClient(uri);
   await client.connect();
 

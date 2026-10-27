@@ -4,16 +4,20 @@ Aplicación con API REST Express/TypeScript, MongoDB Atlas, menú de consola y f
 
 ## Requisitos y configuración
 
-Usa Node.js y npm, una instancia de MongoDB y las variables de entorno siguientes en un archivo `.env` local:
+Usa Node.js y npm. Para conectar con MongoDB Atlas, copia `.env.example` a `.env` y reemplaza `MONGO_URI` por la cadena de conexión de tu cluster:
 
 ```text
-MONGO_URI=<cadena de conexión de MongoDB>
+MONGO_URI=mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
 MONGO_DB_NAME=bicicletas_db
 JWT_SECRET=<secreto privado para firmar tokens>
 PORT=3000
 ```
 
-No publiques `.env`. Instala las dependencias raíz con `npm install` y las del frontend desde `frontend/` con `npm install`.
+La API carga `.env` automáticamente al ejecutar `npm start`. Usa `MONGO_URI` con prioridad; `DATABASE_URL` es aceptada como alternativa. Si ninguna está configurada, la conexión usa `mongodb://127.0.0.1:27017` para desarrollo local.
+
+En Atlas, crea un usuario de base de datos y autoriza la dirección IP del entorno que ejecuta la API en Network Access. Si la contraseña contiene caracteres especiales, codifícalos para URL en la URI. No publiques `.env` ni compartas sus credenciales. `.env` está excluido por `.gitignore`; `.env.example` contiene solo valores de muestra.
+
+Instala las dependencias raíz con `npm install` y las del frontend desde `frontend/` con `npm install`.
 
 ## Comandos
 

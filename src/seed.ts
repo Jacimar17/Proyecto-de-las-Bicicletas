@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { Document, MongoClient, ObjectId } from 'mongodb';
+import { getMongoUri } from './config/db';
 
 interface EstacionSeedDocument extends Document {
     nombre: string;
@@ -22,11 +23,7 @@ const estaciones = [
 ];
 
 async function seed(): Promise<void> {
-    const mongoUri = process.env.MONGO_URI;
-    if (!mongoUri) {
-        throw new Error('MONGO_URI debe configurarse para cargar datos en MongoDB.');
-    }
-
+    const mongoUri = getMongoUri();
     const client = new MongoClient(mongoUri);
     await client.connect();
     try {
