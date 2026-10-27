@@ -36,6 +36,7 @@ El seed usa MongoDB URI desde `.env`, crea estaciones con coordenadas y evita du
 - **Historia de Usuario 1 — Nolla (Usuario / Cliente):** registro, inicio de sesión, consulta de bicicletas disponibles, desbloqueo mediante código, alquiler, devolución en la misma estación u otra e historial personal.
 - **Historia de Usuario 2 — Jacinto (Administrador):** agregar, modificar y eliminar bicicletas, cambiar su estado, consultar alquileres activos y bloquear usuarios.
 - **Historia de Usuario 3 — Luka (Técnico de Mantenimiento):** identificar bicicletas por ID, actualizar su estado de aptitud para uso e impedir que las no aptas estén disponibles; registrar fecha de revisión y técnico responsable.
+- **Tarea adicional de Luka — Gestión de estaciones:** implementar la administración de estaciones en `feature/estaciones-luka`; las operaciones de escritura continúan reservadas al rol administrador.
 
 Las rutas protegidas requieren `Authorization: Bearer <token>`. El registro público siempre crea usuarios cliente; solo un administrador puede asignar roles privilegiados.
 
