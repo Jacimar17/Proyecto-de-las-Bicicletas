@@ -24,8 +24,10 @@ import { ViajeRepositoryMongo } from './viaje/viaje.repository.mongo';
 import { ViajeRoutes } from './viaje/viaje.routes';
 import { ViajeService } from './viaje/viaje.service';
 import { createUserRoutes } from './users/user.routes';
+import { createSyncRoutes } from './sync/sync.routes';
+import { SyncService } from './sync/sync.service';
 
-export function createApp(db: Db): Express {
+export function createApp(db: Db, sync?: SyncService): Express {
   const app = express();
   app.use(cors());
   app.use(express.json());
@@ -82,6 +84,7 @@ export function createApp(db: Db): Express {
   app.use('/api', createBicycleRoutes(db));
   app.use('/api/maintenance', createMaintenanceRoutes(db));
   app.use('/api/users', createUserRoutes(db));
+  if (sync) app.use('/api/sync', createSyncRoutes(sync));
 
   return app;
 }

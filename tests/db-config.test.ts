@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getMongoUri } from "../src/config/db";
+import { getAtlasUri, getLocalMongoUri, getMongoUri } from "../src/config/db";
+
+test("hybrid config: LOCAL_MONGO_URI wins, Atlas is optional", () => {
+  assert.equal(getLocalMongoUri({ LOCAL_MONGO_URI: "mongodb://local", MONGO_URI: "mongodb://x" }), "mongodb://local");
+  assert.equal(getLocalMongoUri({}), "mongodb://127.0.0.1:27017");
+  assert.equal(getAtlasUri({ ATLAS_URI: " " }), undefined);
+  assert.equal(getAtlasUri({ ATLAS_URI: "mongodb+srv://a" }), "mongodb+srv://a");
+});
 
 test("MongoDB connection prefers MONGO_URI over DATABASE_URL", () => {
   assert.equal(
