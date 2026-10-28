@@ -52,6 +52,23 @@ export const authenticate: RequestHandler = (
   }
 };
 
+export function requireRole(...roles: string[]): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.authUser) {
+      res.status(401).json({ success: false, message: "Token not provided" });
+      return;
+    }
+    if (!req.authUser.role || !roles.includes(req.authUser.role)) {
+      res.status(403).json({
+        success: false,
+        message: `Access denied: required role ${roles.join(" or ")}`,
+      });
+      return;
+    }
+    next();
+  };
+}
+
 export const requireAdmin: RequestHandler = (
   req: Request,
   res: Response,
