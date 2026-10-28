@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { Document, MongoClient, ObjectId } from 'mongodb';
-import { getMongoUri } from './config/db';
+import { getMongoDbName, getMongoUri } from './config/db';
 
 interface EstacionSeedDocument extends Document {
     nombre: string;
@@ -27,8 +27,7 @@ async function seed(): Promise<void> {
     const client = new MongoClient(mongoUri);
     await client.connect();
     try {
-        const dbName = process.env.MONGO_DB_NAME || 'bicicletas_db';
-        const db = client.db(dbName);
+        const db = client.db(getMongoDbName());
         const estacionesCollection = db.collection<EstacionSeedDocument>('estaciones');
         const bicicletasCollection = db.collection('bicicletas');
         const now = new Date();

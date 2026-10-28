@@ -13,7 +13,7 @@ JWT_SECRET=<secreto privado para firmar tokens>
 PORT=3000
 ```
 
-La API carga `.env` automáticamente al ejecutar `npm start`. Usa `MONGO_URI` con prioridad; `DATABASE_URL` es aceptada como alternativa. Si ninguna está configurada, la conexión usa `mongodb://127.0.0.1:27017` para desarrollo local.
+La API carga `.env` automáticamente al ejecutar `npm start`. `MONGO_DB_NAME` selecciona la misma base para la API, el seed y la sincronización con Atlas; si se omite, el valor predeterminado es `bicicletas`. Usa `MONGO_URI` con prioridad; `DATABASE_URL` es aceptada como alternativa. Si ninguna está configurada, la conexión usa `mongodb://127.0.0.1:27017` para desarrollo local.
 
 En Atlas, crea un usuario de base de datos y autoriza la dirección IP del entorno que ejecuta la API en Network Access. Si la contraseña contiene caracteres especiales, codifícalos para URL en la URI. No publiques `.env` ni compartas sus credenciales. `.env` está excluido por `.gitignore`; `.env.example` contiene solo valores de muestra.
 

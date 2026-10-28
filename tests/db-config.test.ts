@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getAtlasUri, getLocalMongoUri, getMongoUri } from "../src/config/db";
+import { getAtlasUri, getLocalMongoUri, getMongoDbName, getMongoUri } from "../src/config/db";
+
+test("MongoDB database name defaults to bicicletas and accepts an override", () => {
+  assert.equal(getMongoDbName({}), "bicicletas");
+  assert.equal(getMongoDbName({ MONGO_DB_NAME: "bicicletas_db" }), "bicicletas_db");
+  assert.equal(getMongoDbName({ MONGO_DB_NAME: " " }), "bicicletas");
+});
 
 test("hybrid config: LOCAL_MONGO_URI wins, Atlas is optional", () => {
   assert.equal(getLocalMongoUri({ LOCAL_MONGO_URI: "mongodb://local", MONGO_URI: "mongodb://x" }), "mongodb://local");

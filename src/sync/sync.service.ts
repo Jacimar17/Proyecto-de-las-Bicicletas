@@ -1,4 +1,5 @@
 import { Collection, Db, Document, MongoClient } from "mongodb";
+import { DEFAULT_DB_NAME } from "../config/db";
 
 const DIRTY = "_sync_dirty";
 const META = "_sync_meta";
@@ -66,7 +67,7 @@ export class SyncService {
   constructor(
     private readonly local: Db,
     private readonly atlasClient?: MongoClient,
-    private readonly atlasDbName = "bicicletas_db"
+    private readonly atlasDbName = DEFAULT_DB_NAME
   ) {}
 
   private get atlas(): Db | undefined {

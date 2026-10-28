@@ -1,5 +1,7 @@
 import { Db, MongoClient } from "mongodb";
 
+export const DEFAULT_DB_NAME = "bicicletas";
+
 export interface DatabaseConnection {
   client: MongoClient;
   db: Db;
@@ -25,12 +27,17 @@ export function getAtlasUri(env: Partial<Pick<NodeJS.ProcessEnv, "ATLAS_URI">> =
   return env.ATLAS_URI?.trim() || undefined;
 }
 
+export function getMongoDbName(
+  env: Partial<Pick<NodeJS.ProcessEnv, "MONGO_DB_NAME">> = process.env
+): string {
+  return env.MONGO_DB_NAME?.trim() || DEFAULT_DB_NAME;
+}
+
 export async function connectDB(): Promise<DatabaseConnection> {
   const client = new MongoClient(getLocalMongoUri());
   await client.connect();
 
-  const dbName = process.env.MONGO_DB_NAME || "bicicletas_db";
-  return { client, db: client.db(dbName) };
+  return { client, db: client.db(getMongoDbName()) };
 }
 
 /** Optional Atlas client; returns undefined when not configured or unreachable. */

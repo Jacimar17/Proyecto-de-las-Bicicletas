@@ -1,13 +1,13 @@
 import "dotenv/config";
 import { Server } from "node:http";
 import { createApp, ensureApplicationIndexes } from "./src/app";
-import { connectAtlas, connectDB } from "./src/config/db";
+import { connectAtlas, connectDB, getMongoDbName } from "./src/config/db";
 import { SyncService, trackWrites } from "./src/sync/sync.service";
 
 async function startServer(): Promise<void> {
   const { client, db: rawDb } = await connectDB();
   const atlasClient = await connectAtlas();
-  const sync = new SyncService(rawDb, atlasClient, process.env.MONGO_DB_NAME || "bicicletas_db");
+  const sync = new SyncService(rawDb, atlasClient, getMongoDbName());
   const db = atlasClient ? trackWrites(rawDb) : rawDb;
   await ensureApplicationIndexes(db);
   const app = createApp(db, sync);
