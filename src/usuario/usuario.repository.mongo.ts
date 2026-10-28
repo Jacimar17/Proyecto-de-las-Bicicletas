@@ -1,5 +1,6 @@
 import { Collection, Db, ObjectId } from 'mongodb';
 import { Usuario } from './usuario.entity';
+import { COLLECTIONS } from '../config/collections';
 import { UsuarioRepository } from './usuario.repository.interface';
 
 interface UsuarioDocument extends Omit<Usuario, 'id'> {
@@ -10,15 +11,22 @@ export class UsuarioRepositoryMongo implements UsuarioRepository {
     private readonly collection: Collection<UsuarioDocument>;
 
     constructor(db: Db) {
-        this.collection = db.collection<UsuarioDocument>('usuarios');
+        this.collection =         db.collection<UsuarioDocument>(COLLECTIONS.users);
     }
 
     async ensureIndexes(): Promise<void> {
-        await Promise.all([
-            this.collection.createIndex({ dni: 1 }, { unique: true }),
-            this.collection.createIndex({ email: 1 }, { unique: true })
-        ]);
-    }
+                // La colección es compartida con la API en inglés: sus usuarios pueden no tener DNI.
+                await Promise.all([
+                    this.collection.createIndex(
+                        { dni: 1 },
+                        { unique: true, partialFilterExpression: { dni: { $type: 'string' } } }
+                    ),
+                    this.collection.createIndex(
+                        { email: 1 },
+                        { unique: true, partialFilterExpression: { email: { $type: 'string' } } }
+                    )
+                ]);
+            }
 
     private toEntity(doc: UsuarioDocument): Usuario {
         const { _id, ...rest } = doc;

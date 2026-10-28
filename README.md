@@ -4,20 +4,27 @@ Aplicación con API REST Express/TypeScript, MongoDB Atlas, menú de consola y f
 
 ## Requisitos y configuración
 
-Usa Node.js y npm. Para conectar con MongoDB Atlas, copia `.env.example` a `.env` y reemplaza `MONGO_URI` por la cadena de conexión de tu cluster:
+Usa Node.js y npm. Copia `.env.example` a `.env` para configurar el proyecto en cada computadora. El archivo `.env` no se versiona:
 
 ```text
-MONGO_URI=mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
+MONGO_MODE=local
 MONGO_DB_NAME=bicicletas
+LOCAL_MONGO_URI=mongodb://127.0.0.1:27017
+# Para Atlas directo, configura MONGO_MODE=atlas y define ATLAS_URI:
+# ATLAS_URI=mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
 JWT_SECRET=<secreto privado para firmar tokens>
 PORT=3000
 ```
 
-La API carga `.env` automáticamente al ejecutar `npm start`. `MONGO_DB_NAME` selecciona la misma base para la API, el seed y la sincronización con Atlas; si se omite, el valor predeterminado es `bicicletas`. Usa `MONGO_URI` con prioridad; `DATABASE_URL` es aceptada como alternativa. Si ninguna está configurada, la conexión usa `mongodb://127.0.0.1:27017` para desarrollo local.
+La API carga `.env` automáticamente al ejecutar `npm start`. `MONGO_MODE` puede ser `local` o `atlas` y, si se omite, usa `local`.
 
-En Atlas, crea un usuario de base de datos y autoriza la dirección IP del entorno que ejecuta la API en Network Access. Si la contraseña contiene caracteres especiales, codifícalos para URL en la URI. No publiques `.env` ni compartas sus credenciales. `.env` está excluido por `.gitignore`; `.env.example` contiene solo valores de muestra.
+- **Local:** usa `LOCAL_MONGO_URI` (por defecto `mongodb://127.0.0.1:27017`) y requiere MongoDB instalado y en ejecución en esa computadora. Si configuras `ATLAS_URI`, la sincronización local con Atlas sigue disponible.
+- **Atlas directo:** establece `MONGO_MODE=atlas` y completa `ATLAS_URI`. No requiere MongoDB local; los cambios se guardan directamente en la base compartida `bicicletas`. Si falta `ATLAS_URI` o Atlas no está disponible, el servidor muestra un error en lugar de conectarse localmente.
+- `MONGO_DB_NAME` selecciona la base para la API, el seed y la sincronización; si se omite, usa `bicicletas`.
 
-Instala las dependencias raíz con `npm install` y las del frontend desde `frontend/` con `npm install`.
+Para Atlas, cada desarrollador necesita un usuario de base de datos y debe autorizar la IP actual de su computadora en **Network Access** del proyecto Atlas. Al cambiar de red o de IP, tendrá que autorizar la nueva dirección. La aplicación no crea credenciales ni modifica la lista de IPs automáticamente. Si la contraseña contiene caracteres especiales, codifícalos para URL en la URI. No compartas el archivo `.env` ni guardes credenciales en Git.
+
+Instala las dependencias raíz con `npm install` y las del frontend desde `frontend/` con `npm install`. Para trabajar directamente con Atlas en una computadora nueva, crea su `.env` desde la plantilla y configura `MONGO_MODE=atlas`, `ATLAS_URI` y su IP autorizada en Atlas.
 
 ## Comandos
 
@@ -26,7 +33,7 @@ Instala las dependencias raíz con `npm install` y las del frontend desde `front
 - `npm start`: inicia la API.
 - `npm run dev`: inicia la API en desarrollo.
 - `npm run menu`: inicia el menú de consola.
-- `npm run seed`: agrega estaciones y bicicletas de ejemplo que todavía no existan; no borra datos actuales.
+- `npm run seed`: agrega (sin borrar) usuarios de ejemplo (admin@bicicletas.com y tecnico@bicicletas.com con `SEED_ADMIN_PASSWORD`, por defecto `admin123`; cliente PAPU con DNI `12345678` / `papu1234`), estaciones, bicicletas, un viaje y un mantenimiento.
 - Desde `frontend/`: `npm start` inicia Angular; `npm test -- --watch=false` ejecuta sus pruebas.
 
 El seed usa MongoDB URI desde `.env`, crea estaciones con coordenadas y evita duplicar bicicletas mediante sus códigos existentes.
@@ -39,7 +46,7 @@ El seed usa MongoDB URI desde `.env`, crea estaciones con coordenadas y evita du
 
 Las operaciones protegidas requieren `Authorization: Bearer <token>`. El registro público crea cuentas de cliente. Las rutas administrativas requieren rol de administrador.
 
-El menú de consola permite iniciar sesión, consultar estaciones y bicicletas disponibles, iniciar y devolver viajes y consultar el historial. El menú admite tanto las cuentas antiguas de `users` como las cuentas actuales de `usuarios`.
+El menú de consola permite iniciar sesión, consultar estaciones y bicicletas disponibles, iniciar y devolver viajes y consultar el historial. El menú admite las cuentas de la colección única `users`.
 
 La puntuación comienza en 10 (máximo 10). Una devolución en hasta 3 horas suma un punto; una devolución posterior resta uno. Al llegar a 4, 3 o 2 puntos, la cuenta se suspende por 1, 2 o 3 días, respectivamente. Al llegar a 1 punto, queda bloqueada permanentemente.
 
@@ -66,7 +73,7 @@ Los endpoints en español alimentan la aplicación Angular:
 | `GET` | `/api/mantenimientos` | Administrador/técnico | Consultar actualizaciones de mantenimiento |
 | `POST` | `/api/mantenimientos` | Técnico | Actualizar con `bicicleta_id` y `estado` |
 
-El sistema mantiene además rutas inglesas para funcionalidades heredadas (`/api/bicycles`, `/api/maintenance`, `/api/users`). El flujo de viajes y puntuación puede identificar cuentas tanto en la colección antigua `users` como en la colección actual `usuarios`.
+El sistema mantiene además rutas inglesas para funcionalidades heredadas (`/api/bicycles`, `/api/maintenance`, `/api/users`). Ambas APIs comparten las colecciones `users`, `bicycles`, `stations`, `trips` y `maintenances`; las bicicletas guardan campos equivalentes en español e inglés.
 
 ## Estructura de la API
 

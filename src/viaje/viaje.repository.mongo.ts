@@ -1,5 +1,6 @@
 import { Collection, Db, ObjectId } from 'mongodb';
 import { Viaje } from './viaje.entity';
+import { COLLECTIONS } from '../config/collections';
 import { ViajeRepository } from './viaje.repository.interface';
 
 interface ViajeDocument extends Omit<Viaje, 'id'> {
@@ -10,7 +11,7 @@ export class ViajeRepositoryMongo implements ViajeRepository {
     private readonly collection: Collection<ViajeDocument>;
 
     constructor(db: Db) {
-        this.collection = db.collection<ViajeDocument>('viajes');
+        this.collection = db.collection<ViajeDocument>(COLLECTIONS.trips);
     }
 
     async ensureIndexes(): Promise<void> {

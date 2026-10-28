@@ -1,24 +1,25 @@
 import "dotenv/config";
 import { Server } from "node:http";
 import { createApp, ensureApplicationIndexes } from "./src/app";
-import { connectAtlas, connectDB, getMongoDbName } from "./src/config/db";
+import { connectAtlas, connectDB, getMongoDbName, getMongoMode } from "./src/config/db";
 import { SyncService, trackWrites } from "./src/sync/sync.service";
 
 async function startServer(): Promise<void> {
+  const mode = getMongoMode();
   const { client, db: rawDb } = await connectDB();
-  const atlasClient = await connectAtlas();
-  const sync = new SyncService(rawDb, atlasClient, getMongoDbName());
-  const db = atlasClient ? trackWrites(rawDb) : rawDb;
+  const atlasClient = mode === "local" ? await connectAtlas() : undefined;
+  const sync = atlasClient ? new SyncService(rawDb, atlasClient, getMongoDbName()) : undefined;
+  const db = sync ? trackWrites(rawDb) : rawDb;
   await ensureApplicationIndexes(db);
   const app = createApp(db, sync);
   const port = Number(process.env.PORT || 3000);
   const server: Server = app.listen(port, () => {
     console.log(`Server running on port ${port}`);
   });
-  sync.start(Number(process.env.SYNC_INTERVAL_MS || 30000));
+  sync?.start(Number(process.env.SYNC_INTERVAL_MS || 30000));
 
   const shutdown = (): void => {
-    sync.stop();
+    sync?.stop();
     server.close(() => {
       void Promise.all([client.close(), atlasClient?.close()]).then(() => process.exit(0));
     });

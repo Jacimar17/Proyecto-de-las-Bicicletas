@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import { Collection, Db, Document, ObjectId } from "mongodb";
+import { mirrorBicycleFields } from "../bicycles/bicycle-fields";
+import { COLLECTIONS } from "../config/collections";
 
 interface BicycleDocument extends Document {
   _id: ObjectId;
@@ -21,7 +23,7 @@ export class MaintenanceController {
   private readonly bicycles: Collection<BicycleDocument>;
 
   constructor(db: Db) {
-    this.bicycles = db.collection<BicycleDocument>("bicycles");
+    this.bicycles = db.collection<BicycleDocument>(COLLECTIONS.bicycles);
   }
 
   getById = async (req: Request, res: Response): Promise<void> => {
@@ -73,12 +75,12 @@ export class MaintenanceController {
       const bicycle = await this.bicycles.findOneAndUpdate(
         { _id: new ObjectId(id) },
         {
-          $set: {
+          $set: mirrorBicycleFields({
             status,
             lastMaintenanceDate: new Date(),
             technician: typeof technician === "string" ? technician.trim() : null,
             updatedAt: new Date(),
-          },
+          }),
         },
         { returnDocument: "after" }
       );

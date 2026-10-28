@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { Db, ObjectId } from "mongodb";
 import { Trip } from "./trip.model";
+import { mirrorBicycleFields } from "../bicycles/bicycle-fields";
+import { COLLECTIONS } from "../config/collections";
 
 interface BicycleDocument {
   _id: ObjectId;
@@ -56,8 +58,8 @@ export class TripController {
       return;
     }
 
-    const bicycles = this.db.collection<BicycleDocument>("bicicletas");
-    const trips = this.db.collection<TripDocument>("viajes");
+    const bicycles = this.db.collection<BicycleDocument>(COLLECTIONS.bicycles);
+    const trips = this.db.collection<TripDocument>(COLLECTIONS.trips);
     try {
       const user = await this.db.collection<UserDocument>("users").findOne({
         _id: new ObjectId(userId),
@@ -95,7 +97,7 @@ export class TripController {
       }
 
       const originId = new ObjectId(bicycle.estacion_id);
-      const station = await this.db.collection<StationDocument>("estaciones").findOne({
+      const station = await this.db.collection<StationDocument>(COLLECTIONS.stations).findOne({
         _id: originId,
         activa: true,
       });
@@ -107,7 +109,7 @@ export class TripController {
       const startTime = new Date();
       const updatedBicycle = await bicycles.findOneAndUpdate(
         { _id: new ObjectId(bicycleId), estado: "DISPONIBLE", estacion_id: bicycle.estacion_id },
-        { $set: { estado: "EN_USO", usuario_id: userId, updatedAt: startTime } },
+        { $set: mirrorBicycleFields({ estado: "EN_USO", usuario_id: userId, updatedAt: startTime }) },
         { returnDocument: "after" }
       );
       if (!updatedBicycle) {
@@ -132,7 +134,7 @@ export class TripController {
       } catch (error) {
         await bicycles.findOneAndUpdate(
           { _id: new ObjectId(bicycleId), estado: "EN_USO", usuario_id: userId },
-          { $set: { estado: "DISPONIBLE", usuario_id: null, updatedAt: new Date() } },
+          { $set: mirrorBicycleFields({ estado: "DISPONIBLE", usuario_id: null, updatedAt: new Date() }) },
           { returnDocument: "after" }
         );
         throw error;
@@ -158,8 +160,8 @@ export class TripController {
       return;
     }
 
-    const trips = this.db.collection<TripDocument>("viajes");
-    const bicycles = this.db.collection<BicycleDocument>("bicicletas");
+    const trips = this.db.collection<TripDocument>(COLLECTIONS.trips);
+    const bicycles = this.db.collection<BicycleDocument>(COLLECTIONS.bicycles);
     try {
       const trip = await trips.findOne({
         _id: new ObjectId(tripId),
@@ -170,7 +172,7 @@ export class TripController {
         res.status(404).json({ message: "No se encontró un viaje activo para este usuario" });
         return;
       }
-      const destination = await this.db.collection<StationDocument>("estaciones").findOne({
+      const destination = await this.db.collection<StationDocument>(COLLECTIONS.stations).findOne({
         _id: new ObjectId(destinationId),
         activa: true,
       });
@@ -197,13 +199,13 @@ export class TripController {
           usuario_id: userId,
         },
         {
-          $set: {
+          $set: mirrorBicycleFields({
             estado: "DISPONIBLE",
             estacion_id: destinationId,
             ubicacion: destination.nombre,
             usuario_id: null,
             updatedAt: finishedAt,
-          },
+          }),
         },
         { returnDocument: "after" }
       );
@@ -221,13 +223,13 @@ export class TripController {
         await bicycles.findOneAndUpdate(
           { _id: new ObjectId(trip.bicicletaId), estado: "DISPONIBLE", estacion_id: destinationId },
           {
-            $set: {
+            $set: mirrorBicycleFields({
               estado: "EN_USO",
               estacion_id: trip.estacionOrigenId,
               ubicacion: currentBicycle.ubicacion,
               usuario_id: userId,
               updatedAt: new Date(),
-            },
+            }),
           },
           { returnDocument: "after" }
         );
@@ -301,7 +303,7 @@ export class TripController {
     }
     try {
       const documents = await this.db
-        .collection<TripDocument>("viajes")
+        .collection<TripDocument>(COLLECTIONS.trips)
         .find({ usuarioId: userId })
         .sort({ fechaInicio: -1 })
         .toArray();

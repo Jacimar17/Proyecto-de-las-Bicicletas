@@ -162,7 +162,8 @@ export class UserService {
 
     const secret = process.env.JWT_SECRET;
     if (!secret) throw new Error("JWT_SECRET no está configurado");
-    const role: UserRole = user.role === "admin" ? "admin" : "cliente";
+    const role: UserRole =
+      user.role === "admin" || user.role === "tecnico" ? user.role : "cliente";
     const token = jwt.sign(
       {
         id: user.id,

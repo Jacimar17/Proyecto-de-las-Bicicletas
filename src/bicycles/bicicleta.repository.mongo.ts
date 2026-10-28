@@ -1,6 +1,8 @@
 import { Collection, Db, ObjectId } from 'mongodb';
 import { Bicicleta, EstadoBicicleta } from './bicicleta.entity';
 import { BicicletaRepository } from './bicicleta.repository.interface';
+import { COLLECTIONS } from '../config/collections';
+import { mirrorBicycleFields } from './bicycle-fields';
 
 interface BicicletaDocument extends Omit<Bicicleta, 'id'> {
     _id?: ObjectId;
@@ -11,7 +13,7 @@ export class BicicletaRepositoryMongo implements BicicletaRepository {
     private readonly collection: Collection<BicicletaDocument>;
 
     constructor(db: Db) {
-        this.collection = db.collection<BicicletaDocument>('bicicletas');
+        this.collection = db.collection<BicicletaDocument>(COLLECTIONS.bicycles);
     }
 
     private toEntity(doc: BicicletaDocument): Bicicleta {
@@ -42,14 +44,18 @@ export class BicicletaRepositoryMongo implements BicicletaRepository {
 
     async create(bicicleta: Bicicleta): Promise<Bicicleta> {
         const now = new Date();
-        const doc: BicicletaDocument = { ...bicicleta, createdAt: now, updatedAt: now };
+        const doc: BicicletaDocument = {
+            ...mirrorBicycleFields({ unlockCode: bicicleta.codigo, ...bicicleta }),
+            createdAt: now,
+            updatedAt: now
+        };
         const result = await this.collection.insertOne(doc);
         return { ...bicicleta, id: result.insertedId.toString(), createdAt: now, updatedAt: now };
     }
 
     async update(id: string, bicicleta: Partial<Bicicleta>): Promise<Bicicleta | null> {
         if (!ObjectId.isValid(id)) return null;
-        const updateData = { ...bicicleta, updatedAt: new Date() };
+        const updateData = { ...mirrorBicycleFields(bicicleta), updatedAt: new Date() };
         const result = await this.collection.findOneAndUpdate(
             { _id: new ObjectId(id) },
             { $set: updateData },
@@ -66,7 +72,7 @@ export class BicicletaRepositoryMongo implements BicicletaRepository {
         if (!ObjectId.isValid(id)) return null;
         const result = await this.collection.findOneAndUpdate(
             { _id: new ObjectId(id), estado },
-            { $set: { ...bicicleta, updatedAt: new Date() } },
+            { $set: { ...mirrorBicycleFields(bicicleta), updatedAt: new Date() } },
             { returnDocument: 'after' }
         );
         return result ? this.toEntity(result) : null;

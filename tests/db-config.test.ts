@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getAtlasUri, getLocalMongoUri, getMongoDbName, getMongoUri } from "../src/config/db";
+import {
+  getAtlasUri,
+  getLocalMongoUri,
+  getMongoConnectionUri,
+  getMongoDbName,
+  getMongoMode,
+  getMongoUri,
+} from "../src/config/db";
 
 test("MongoDB database name defaults to bicicletas and accepts an override", () => {
   assert.equal(getMongoDbName({}), "bicicletas");
@@ -13,6 +20,28 @@ test("hybrid config: LOCAL_MONGO_URI wins, Atlas is optional", () => {
   assert.equal(getLocalMongoUri({}), "mongodb://127.0.0.1:27017");
   assert.equal(getAtlasUri({ ATLAS_URI: " " }), undefined);
   assert.equal(getAtlasUri({ ATLAS_URI: "mongodb+srv://a" }), "mongodb+srv://a");
+});
+
+test("MongoDB mode defaults to local and validates explicit modes", () => {
+  assert.equal(getMongoMode({}), "local");
+  assert.equal(getMongoMode({ MONGO_MODE: " ATLAS " }), "atlas");
+  assert.throws(() => getMongoMode({ MONGO_MODE: "remote" }), /Expected "local" or "atlas"/);
+});
+
+test("Atlas mode requires and uses ATLAS_URI without a local URI", () => {
+  assert.equal(
+    getMongoConnectionUri("atlas", { ATLAS_URI: "mongodb+srv://atlas.example" }),
+    "mongodb+srv://atlas.example"
+  );
+  assert.throws(() => getMongoConnectionUri("atlas", {}), /ATLAS_URI is required/);
+});
+
+test("local mode continues to use the local URI configuration", () => {
+  assert.equal(
+    getMongoConnectionUri("local", { LOCAL_MONGO_URI: "mongodb://local" }),
+    "mongodb://local"
+  );
+  assert.equal(getMongoConnectionUri("local", {}), "mongodb://127.0.0.1:27017");
 });
 
 test("MongoDB connection prefers MONGO_URI over DATABASE_URL", () => {

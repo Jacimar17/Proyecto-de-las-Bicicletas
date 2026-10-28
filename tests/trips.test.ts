@@ -74,7 +74,7 @@ async function startServer(score = 10, accountCollection: "users" | "usuarios" =
   process.env.JWT_SECRET = "test-secret-for-trip-tests";
   const fakeDb = createFakeDb();
   const userId = new ObjectId();
-  await fakeDb.collection(accountCollection).insertOne({
+  await fakeDb.collection(accountCollection === "usuarios" ? "users" : accountCollection).insertOne({
     _id: userId,
     puntuacion: score,
     suspendidoHasta: null,
@@ -255,7 +255,7 @@ test("slow rides subtract a point, suspend at four, and block further rentals du
   });
   const started = await start.json();
   const startedAt = new Date(Date.now() - 3 * 60 * 60 * 1000 - 1);
-  await fakeDb.collection("viajes").findOneAndUpdate(
+  await fakeDb.collection("trips").findOneAndUpdate(
     { _id: new ObjectId(started.data.id) },
     { $set: { fecha_inicio: startedAt } }
   );
@@ -295,7 +295,7 @@ test("reaching one point permanently blocks the account from starting trips", as
     body: JSON.stringify({ bicicletaId: bicycle.id }),
   });
   const started = await start.json();
-  await fakeDb.collection("viajes").findOneAndUpdate(
+  await fakeDb.collection("trips").findOneAndUpdate(
     { _id: new ObjectId(started.data.id) },
     { $set: { fecha_inicio: new Date(Date.now() - 4 * 60 * 60 * 1000) } }
   );
@@ -320,7 +320,7 @@ test("reaching one point permanently blocks the account from starting trips", as
   assert.equal(storedUser?.bloqueado, true);
 });
 
-test("the trip score updates accounts registered in the Spanish usuarios collection", async () => {
+test("the trip score updates accounts created through the Spanish usuario API", async () => {
   const { baseUrl, token, fakeDb, userId, adminHeaders } = await startServer(9, "usuarios");
   const headers = {
     authorization: `Bearer ${token}`,
@@ -342,7 +342,7 @@ test("the trip score updates accounts registered in the Spanish usuarios collect
 
   assert.equal(finish.status, 200);
   assert.equal(finished.puntuacion, 10);
-  const storedUser = await fakeDb.collection("usuarios").findOne({ _id: userId });
+  const storedUser = await fakeDb.collection("users").findOne({ _id: userId });
   assert.equal(storedUser?.puntuacion, 10);
 });
 

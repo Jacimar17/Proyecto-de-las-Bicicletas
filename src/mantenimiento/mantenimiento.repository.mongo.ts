@@ -1,5 +1,6 @@
 import { Collection, Db, ObjectId } from 'mongodb';
 import { Mantenimiento } from './mantenimiento.entity';
+import { COLLECTIONS } from '../config/collections';
 import { MantenimientoRepository } from './mantenimiento.repository.interface';
 
 interface MantenimientoDocument extends Omit<Mantenimiento, 'id'> {
@@ -10,7 +11,7 @@ export class MantenimientoRepositoryMongo implements MantenimientoRepository {
     private readonly collection: Collection<MantenimientoDocument>;
 
     constructor(db: Db) {
-        this.collection = db.collection<MantenimientoDocument>('mantenimientos');
+        this.collection = db.collection<MantenimientoDocument>(COLLECTIONS.maintenances);
     }
 
     private toEntity(doc: MantenimientoDocument): Mantenimiento {

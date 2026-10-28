@@ -1,6 +1,7 @@
 import { Collection, Db, Document, ObjectId } from "mongodb";
 import { User } from "./user.entity";
 import { UserRepository } from "./user.repository.interface";
+import { COLLECTIONS } from "../config/collections";
 
 export interface UserDocument extends Document, Omit<User, "id"> {
   _id: ObjectId;
@@ -10,7 +11,7 @@ export class UserRepositoryMongo implements UserRepository {
   private readonly collection: Collection<UserDocument>;
 
   constructor(db: Db) {
-    this.collection = db.collection<UserDocument>("users");
+    this.collection = db.collection<UserDocument>(COLLECTIONS.users);
   }
 
   async findAll(): Promise<User[]> {

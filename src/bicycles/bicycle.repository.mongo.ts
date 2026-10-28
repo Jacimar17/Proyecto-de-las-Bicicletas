@@ -1,5 +1,7 @@
 import { Collection, Db, Document, ObjectId } from "mongodb";
 import { Bicycle, BicycleStatus } from "./bicycle.model";
+import { COLLECTIONS } from "../config/collections";
+import { mirrorBicycleFields } from "./bicycle-fields";
 
 export interface BicycleDocument extends Document {
   code: string;
@@ -15,7 +17,7 @@ export class BicycleRepositoryMongo {
   private readonly collection: Collection<BicycleDocument>;
 
   constructor(db: Db) {
-    this.collection = db.collection<BicycleDocument>("bicycles");
+    this.collection = db.collection<BicycleDocument>(COLLECTIONS.bicycles);
   }
 
   getCollection(): Collection<BicycleDocument> {
@@ -35,7 +37,7 @@ export class BicycleRepositoryMongo {
 
   async create(data: Omit<Bicycle, "_id">): Promise<Bicycle> {
     const now = new Date();
-    const document: BicycleDocument = { ...data, createdAt: now, updatedAt: now };
+    const document: BicycleDocument = { ...mirrorBicycleFields(data), createdAt: now, updatedAt: now };
     const result = await this.collection.insertOne(document);
     return { ...document, _id: result.insertedId.toString() };
   }
@@ -44,7 +46,7 @@ export class BicycleRepositoryMongo {
     if (!ObjectId.isValid(id)) return null;
     const document = await this.collection.findOneAndUpdate(
       { _id: new ObjectId(id) },
-      { $set: { ...data, updatedAt: new Date() } },
+      { $set: { ...mirrorBicycleFields(data), updatedAt: new Date() } },
       { returnDocument: "after" }
     );
     return document ? this.toBicycle(document) : null;

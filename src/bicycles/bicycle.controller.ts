@@ -4,6 +4,7 @@ import { BicycleDocument, BicycleRepositoryMongo } from "./bicycle.repository.mo
 import { Bicycle, BicycleStatus } from "./bicycle.model";
 import { Bicicleta, EstadoBicicleta } from "./bicicleta.entity";
 import { BicicletaRepositoryMongo } from "./bicicleta.repository.mongo";
+import { mirrorBicycleFields } from "./bicycle-fields";
 
 const statuses: BicycleStatus[] = ["AVAILABLE", "IN_USE", "NOT_SUITABLE"];
 
@@ -213,7 +214,13 @@ export class BicycleController {
       const collection = this.legacyBicycles.getCollection();
       const bicycle = await collection.findOneAndUpdate(
         { _id: new ObjectId(id), status: "AVAILABLE" },
-        { $set: { status: "IN_USE", rentedBy: rentedBy.trim(), updatedAt: new Date() } },
+        {
+          $set: mirrorBicycleFields({
+            status: "IN_USE" as const,
+            rentedBy: rentedBy.trim(),
+            updatedAt: new Date(),
+          }),
+        },
         { returnDocument: "after" }
       );
       if (bicycle) {

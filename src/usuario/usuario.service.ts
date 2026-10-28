@@ -25,6 +25,8 @@ export class UsuarioService {
             const user = await this.repository.create({
                 dni,
                 nombre: data.nombre.trim(),
+                name: data.nombre.trim(),
+                lastName: '',
                 email,
                 password: await bcrypt.hash(data.password, 10),
                 bloqueado: false,
@@ -53,7 +55,7 @@ export class UsuarioService {
         const secret = process.env.JWT_SECRET;
         if (!secret) throw new Error('JWT_SECRET no está configurado');
         const token = jwt.sign(
-            { id: user.id, nombre: user.nombre, email: user.email, role: user.role, accountCollection: 'usuarios' },
+            { id: user.id, nombre: user.nombre, email: user.email, role: user.role, accountCollection: 'users' },
             secret,
             { expiresIn: '2h' }
         );

@@ -1,5 +1,6 @@
 import { Collection, Db, ObjectId } from 'mongodb';
 import { Estacion } from './estacion.entity';
+import { COLLECTIONS } from '../config/collections';
 import { EstacionRepository } from './estacion.repository.interface';
 
 interface EstacionDocument extends Omit<Estacion, 'id'> {
@@ -11,7 +12,7 @@ export class EstacionRepositoryMongo implements EstacionRepository {
     private readonly collection: Collection<EstacionDocument>;
 
     constructor(db: Db) {
-        this.collection = db.collection<EstacionDocument>('estaciones');
+        this.collection = db.collection<EstacionDocument>(COLLECTIONS.stations);
     }
 
     private toEntity(doc: EstacionDocument): Estacion {
