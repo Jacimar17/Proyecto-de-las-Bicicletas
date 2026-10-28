@@ -8,7 +8,7 @@ Usa Node.js y npm. Para conectar con MongoDB Atlas, copia `.env.example` a `.env
 
 ```text
 MONGO_URI=mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
-MONGO_DB_NAME=bicicletas_db
+MONGO_DB_NAME=bicicletas
 JWT_SECRET=<secreto privado para firmar tokens>
 PORT=3000
 ```

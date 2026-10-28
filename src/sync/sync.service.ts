@@ -127,6 +127,14 @@ export class SyncService {
     const atlas = this.requireAtlas();
     const summary: SyncSummary = { collections: {}, skipped: [] };
     for (const name of await this.pending()) {
+      const neverPulled = (await this.getMeta("lastPull")) === null;
+      const localEmpty = (await this.local.collection(name).estimatedDocumentCount()) === 0;
+      // Primera sincronización con local vacío: no borrar Atlas, dejar que el pull lo llene.
+      if (neverPulled && localEmpty) {
+        await this.local.collection(DIRTY).deleteOne({ _id: name as never });
+        summary.skipped.push(name);
+        continue;
+      }
       summary.collections[name] = await this.mirror(this.local, atlas, name);
       await this.local.collection(DIRTY).deleteOne({ _id: name as never });
     }
