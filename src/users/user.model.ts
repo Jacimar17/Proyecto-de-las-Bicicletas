@@ -9,6 +9,8 @@ export interface User {
   role: UserRole;
   dni?: string;
   nombre?: string;
+  puntuacion: number;
+  suspendidoHasta?: Date | null;
   bloqueado?: boolean;
   createdAt?: Date;
   updatedAt?: Date;

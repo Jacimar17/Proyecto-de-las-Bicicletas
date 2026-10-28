@@ -9,6 +9,7 @@ import { EstacionService } from "./estacion/estacion.service";
 import { BicicletaRepositoryMongo } from "./bicycles/bicicleta.repository.mongo";
 import { createMaintenanceRoutes } from "./maintenance/maintenance.routes";
 import { createUserRoutes } from "./users/user.routes";
+import { createTripRoutes } from "./trips/trip.routes";
 
 export function createApp(db: Db): Express {
   const app = express();
@@ -41,6 +42,7 @@ export function createApp(db: Db): Express {
   app.use("/api/maintenance", createMaintenanceRoutes(db));
   app.use("/api/users", createUserRoutes(db));
   app.use("/api/usuario", createUserRoutes(db));
+  app.use("/api/viajes", createTripRoutes(db));
 
   return app;
 }

@@ -90,6 +90,7 @@ test("user registration hashes passwords and login returns a signed token", asyn
   assert.equal(registration.status, 201);
   assert.equal(registrationData.user.email, "ada@example.com");
   assert.equal(registrationData.user.role, "cliente");
+  assert.equal(registrationData.user.puntuacion, 10);
   assert.equal("password" in registrationData.user, false);
 
   const failedLogin = await fetch(`${baseUrl}/api/users/login`, {

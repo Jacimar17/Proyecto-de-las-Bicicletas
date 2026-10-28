@@ -12,6 +12,7 @@ export interface Bicicleta {
     ubicacion: string;
     estado: EstadoBicicleta;
     estacion_id: string | null;
+    usuario_id?: string | null;
     fecha_ultima_revision: Date | null;
     tecnico_responsable: string | null;
     createdAt?: Date;

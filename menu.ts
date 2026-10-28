@@ -17,6 +17,9 @@ interface User {
   lastName?: string;
   email: string;
   role?: string;
+  puntuacion?: number;
+  suspendidoHasta?: string | null;
+  bloqueado?: boolean;
 }
 
 interface SessionUser extends User {
@@ -33,7 +36,38 @@ interface ApiData {
   user?: User;
   users?: User[];
   total?: number;
-  data?: Bicycle | Bicycle[];
+  data?: unknown;
+  puntuacion?: number;
+  suspendidoHasta?: string | null;
+  bloqueado?: boolean;
+}
+
+interface Station {
+  id: string;
+  nombre: string;
+  barrio: string;
+  direccion: string;
+  activa: boolean;
+  disponibles?: number;
+  bicicletas?: StationBicycle[];
+}
+
+interface StationBicycle {
+  id: string;
+  codigo: string;
+  modelo: string;
+  estado: string;
+  estacion_id: string | null;
+}
+
+interface Trip {
+  id: string;
+  usuarioId: string;
+  bicicletaId: string;
+  estacionOrigenId: string;
+  estacionDestinoId: string | null;
+  fechaInicio: string;
+  fechaFin: string | null;
 }
 
 interface ApiResult {
@@ -61,8 +95,8 @@ function print(obj: unknown): void {
 }
 
 function getBicycles(data: ApiData): Bicycle[] {
-  if (Array.isArray(data.data)) return data.data;
-  return data.data ? [data.data] : [];
+  if (Array.isArray(data.data)) return data.data as Bicycle[];
+  return data.data ? [data.data as Bicycle] : [];
 }
 
 // ---------- Llamadas a la API ----------
@@ -175,28 +209,36 @@ async function clientMenu(): Promise<"login" | "exit"> {
     if (!user) return "login";
     console.log("\n========= MENÚ CLIENTE =========");
     console.log(`Usuario: ${user.name} (${user.email})`);
-    console.log("1. Ver bicicletas disponibles");
-    console.log("2. Solicitar una bicicleta disponible");
-    console.log("3. Ver mi perfil");
-    console.log("4. Cerrar sesión");
-    console.log("5. Salir");
+    console.log("1. Ver estaciones y bicicletas disponibles");
+    console.log("2. Iniciar un viaje");
+    console.log("3. Devolver bicicleta");
+    console.log("4. Consultar mi historial de viajes");
+    console.log("5. Ver mi perfil");
+    console.log("6. Cerrar sesión");
+    console.log("7. Salir");
     const opt = await ask("\nSelecciona una opción: ");
 
     switch (opt) {
       case "1":
-        await clientViewBicycles();
+        await clientViewStationsAndBicycles();
         break;
       case "2":
-        await clientRequestBicycle();
+        await clientStartTrip();
         break;
       case "3":
-        await viewProfile();
+        await clientFinishTrip();
         break;
       case "4":
+        await clientTripHistory();
+        break;
+      case "5":
+        await viewProfile();
+        break;
+      case "6":
         currentUser = null;
         console.log("\nSesión cerrada.\n");
         return "login";
-      case "5":
+      case "7":
         return "exit";
       default:
         console.log("Opción no válida.");
@@ -205,60 +247,188 @@ async function clientMenu(): Promise<"login" | "exit"> {
   return "exit";
 }
 
-async function clientViewBicycles() {
-  const { status, data } = await apiFetch("/api/bicycles");
-  if (status === 200) {
-    const available = getBicycles(data).filter((b) => b.status === "AVAILABLE");
-    console.log("\n----- BICICLETAS DISPONIBLES -----");
-    showBicycles(available);
+async function getStations(): Promise<Station[] | null> {
+  const { status, data } = await apiFetch("/api/estaciones");
+  if (status !== 200) {
+    print(data);
+    return null;
+  }
+  if (!Array.isArray(data)) {
+    console.log("\nLa API devolvió un listado de estaciones no válido.\n");
+    return null;
+  }
+  return data as Station[];
+}
+
+async function getActiveStations(): Promise<Station[] | null> {
+  const stations = await getStations();
+  return stations?.filter((station) => station.activa) ?? null;
+}
+
+function showStations(stations: Station[]): void {
+  stations.forEach((station, index) => {
+    console.log(`${index + 1}. ${station.nombre} - ${station.barrio} (${station.direccion})`);
+  });
+}
+
+async function chooseStation(stations: Station[]): Promise<Station | null> {
+  if (stations.length === 0) {
+    console.log("\nNo hay estaciones habilitadas.\n");
+    return null;
+  }
+  showStations(stations);
+  const selection = await ask("\nSelecciona el número de la estación: ");
+  const index = Number(selection) - 1;
+  if (!Number.isInteger(index) || index < 0 || index >= stations.length) {
+    console.log("\nSelección de estación no válida.\n");
+    return null;
+  }
+  return stations[index];
+}
+
+async function getStationDetails(stationId: string): Promise<Station | null> {
+  const { status, data } = await apiFetch(`/api/estacion/${stationId}`);
+  if (status !== 200) {
+    print(data);
+    return null;
+  }
+  return data as unknown as Station;
+}
+
+async function clientViewStationsAndBicycles(): Promise<void> {
+  const stations = await getActiveStations();
+  if (!stations) return;
+  if (stations.length === 0) {
+    console.log("\nNo hay estaciones habilitadas.\n");
+    return;
+  }
+
+  console.log("\n----- ESTACIONES Y BICICLETAS DISPONIBLES -----");
+  for (const station of stations) {
+    const details = await getStationDetails(station.id);
+    if (!details) continue;
+    const available = (details.bicicletas || []).filter((bicycle) => bicycle.estado === "DISPONIBLE");
+    console.log(`\n${station.nombre} - ${station.direccion}`);
+    if (available.length === 0) {
+      console.log("  No hay bicicletas disponibles.");
+      continue;
+    }
+    available.forEach((bicycle) => {
+      console.log(`  ${bicycle.codigo} | ${bicycle.modelo} | ID: ${bicycle.id}`);
+    });
+  }
+  console.log("");
+}
+
+async function clientStartTrip(): Promise<void> {
+  const stations = await getActiveStations();
+  if (!stations) return;
+  console.log("\n----- INICIAR VIAJE -----");
+  const station = await chooseStation(stations);
+  if (!station) return;
+
+  const details = await getStationDetails(station.id);
+  if (!details) return;
+  const available = (details.bicicletas || []).filter((bicycle) => bicycle.estado === "DISPONIBLE");
+  if (available.length === 0) {
+    console.log("\nNo hay bicicletas disponibles en esta estación.\n");
+    return;
+  }
+
+  console.log(`\nBicicletas disponibles en ${station.nombre}:`);
+  available.forEach((bicycle, index) => {
+    console.log(`${index + 1}. ${bicycle.codigo} - ${bicycle.modelo} (ID: ${bicycle.id})`);
+  });
+  const selection = Number(await ask("\nSelecciona el número de la bicicleta: ")) - 1;
+  if (!Number.isInteger(selection) || selection < 0 || selection >= available.length) {
+    console.log("\nSelección de bicicleta no válida.\n");
+    return;
+  }
+
+  const bicycle = available[selection];
+  const confirm = await ask(`¿Iniciar un viaje con ${bicycle.codigo}? (si/no): `);
+  if (confirm.toLowerCase() !== "si") {
+    console.log("\nViaje cancelado.\n");
+    return;
+  }
+  const { status, data } = await apiFetch("/api/viajes", "POST", { bicicletaId: bicycle.id });
+  if (status === 201) {
+    const trip = data.data as Trip;
+    console.log(`\n${data.message || "Viaje iniciado"}.`);
+    console.log(`Origen: ${station.nombre}`);
+    console.log(`Fecha y hora de inicio: ${new Date(trip.fechaInicio).toLocaleString()}\n`);
   } else {
     print(data);
   }
 }
 
-async function clientRequestBicycle() {
+async function clientFinishTrip(): Promise<void> {
   const user = currentUser;
   if (!user) return;
-  // Primero mostrar las disponibles
-  const { status, data } = await apiFetch("/api/bicycles");
-  if (status !== 200) {
+  const { status: historyStatus, data: historyData } = await apiFetch("/api/viajes/mis-viajes");
+  if (historyStatus !== 200 || !Array.isArray(historyData)) {
+    print(historyData);
+    return;
+  }
+  const activeTrip = (historyData as Trip[]).find((trip) => !trip.fechaFin);
+  if (!activeTrip) {
+    console.log("\nNo tienes viajes activos para finalizar.\n");
+    return;
+  }
+
+  const stations = await getActiveStations();
+  if (!stations) return;
+  console.log(`\n----- DEVOLVER BICICLETA ${activeTrip.bicicletaId} -----`);
+  console.log("Selecciona la estación habilitada donde dejarás la bicicleta:");
+  const station = await chooseStation(stations);
+  if (!station) return;
+
+  const { status, data } = await apiFetch(
+    `/api/viajes/${activeTrip.id}/devolver`,
+    "PATCH",
+    { estacionDestinoId: station.id }
+  );
+  if (status === 200) {
+    const trip = data.data as Trip;
+    console.log(`\n${data.message || "Viaje finalizado"}.`);
+    console.log(`Destino: ${station.nombre}`);
+    console.log(`Fecha y hora de finalización: ${new Date(trip.fechaFin as string).toLocaleString()}\n`);
+    console.log(`Puntuación actual: ${data.puntuacion ?? "no disponible"}/10`);
+    if (data.bloqueado) {
+      console.log("Tu cuenta quedó bloqueada. Contacta a un administrador.\n");
+    } else if (data.suspendidoHasta && new Date(data.suspendidoHasta).getTime() > Date.now()) {
+      console.log(`Tu cuenta está suspendida hasta: ${new Date(data.suspendidoHasta).toLocaleString()}\n`);
+    }
+  } else {
+    print(data);
+  }
+}
+
+async function clientTripHistory(): Promise<void> {
+  const { status, data } = await apiFetch("/api/viajes/mis-viajes");
+  if (status !== 200 || !Array.isArray(data)) {
     print(data);
     return;
   }
-  const available = getBicycles(data).filter((b) => b.status === "AVAILABLE");
-
-  if (available.length === 0) {
-    console.log("\nNo hay bicicletas disponibles en este momento.\n");
+  const trips = data as Trip[];
+  if (trips.length === 0) {
+    console.log("\nTodavía no tienes viajes registrados.\n");
     return;
   }
 
-  console.log("\n----- BICICLETAS DISPONIBLES -----");
-  showBicycles(available);
-
-  const id = await ask("\nIngresa el ID de la bicicleta que deseas solicitar: ");
-  const confirm = await ask(`¿Confirmas solicitar la bicicleta ${id}? (si/no): `);
-  if (confirm.toLowerCase() !== "si") {
-    console.log("Solicitud cancelada.\n");
-    return;
-  }
-
-  const { status: s, data: d } = await apiFetch(
-    `/api/bicycles/${id}/request`,
-    "PATCH",
-    { rentedBy: user.email }
-  );
-
-  if (s === 200) {
-    console.log(`\n${d.message}`);
-    const bicycle = getBicycles(d)[0];
-    if (bicycle) {
-      console.log(`Estado actual: ${translateStatus(bicycle.status)}\n`);
-    }
-  } else if (s === 409) {
-    console.log(`\n${d.message}\n`);
-  } else {
-    print(d);
-  }
+  const stations = await getStations();
+  if (!stations) return;
+  const stationName = (id: string | null) =>
+    stations.find((station) => station.id === id)?.nombre || id || "Pendiente";
+  console.log("\n----- HISTORIAL DE VIAJES -----");
+  trips.forEach((trip, index) => {
+    console.log(`\n${index + 1}. Bicicleta: ${trip.bicicletaId}`);
+    console.log(`   Origen: ${stationName(trip.estacionOrigenId)}`);
+    console.log(`   Inicio: ${new Date(trip.fechaInicio).toLocaleString()}`);
+    console.log(`   Destino: ${stationName(trip.estacionDestinoId)}`);
+    console.log(`   Finalización: ${trip.fechaFin ? new Date(trip.fechaFin).toLocaleString() : "Viaje activo"}`);
+  });
+  console.log("");
 }
 
 // ---------- MENÚ ADMIN ----------
@@ -604,6 +774,12 @@ async function viewProfile() {
     console.log(`Nombre: ${me.name} ${me.lastName}`);
     console.log(`Email: ${me.email}`);
     console.log(`Rol: ${me.role || "cliente"}`);
+    console.log(`Puntuación: ${me.puntuacion ?? 10}/10`);
+    if (me.bloqueado) {
+      console.log("Estado: Cuenta bloqueada");
+    } else if (me.suspendidoHasta && new Date(me.suspendidoHasta).getTime() > Date.now()) {
+      console.log(`Estado: Suspendida hasta ${new Date(me.suspendidoHasta).toLocaleString()}`);
+    }
     console.log("");
   } else {
     console.log("\nNo se encontró tu perfil.\n");

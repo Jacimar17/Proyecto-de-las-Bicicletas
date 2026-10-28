@@ -81,6 +81,8 @@ export class UserController {
         role: "cliente",
         ...(dni ? { dni } : {}),
         nombre: name,
+        puntuacion: 10,
+        suspendidoHasta: null,
         bloqueado: false,
       });
       const safeUser = publicUser(user);
@@ -261,6 +263,17 @@ export class UserController {
           : await this.users.findByName(name);
       if (!user || !(await bcrypt.compare(password, user.password))) {
         sendError(res, 401, "Credenciales incorrectas");
+        return;
+      }
+      if (user.bloqueado) {
+        sendError(res, 403, "Tu cuenta está bloqueada y no puede utilizarse");
+        return;
+      }
+      if (user.suspendidoHasta && user.suspendidoHasta.getTime() > Date.now()) {
+        sendError(res, 403, "Tu cuenta está suspendida", {
+          suspendidoHasta: user.suspendidoHasta,
+          puntuacion: user.puntuacion ?? 10,
+        });
         return;
       }
 
