@@ -4,8 +4,15 @@ import { AddressInfo } from "node:net";
 import { Server } from "node:http";
 import { createApp } from "../src/app";
 import { Db, ObjectId } from "mongodb";
+import jwt from "jsonwebtoken";
 
 const servers: Server[] = [];
+process.env.JWT_SECRET = process.env.JWT_SECRET ?? "test-only-secret";
+
+function authHeaders(role: string) {
+  const token = jwt.sign({ id: `${role}-id`, role }, process.env.JWT_SECRET!);
+  return { "content-type": "application/json", authorization: `Bearer ${token}` };
+}
 
 function createFakeDb() {
   const collections = new Map<string, Record<string, unknown>[]>();
@@ -93,16 +100,29 @@ test("bicycle APIs preserve both English and Spanish routes", async () => {
 
 test("legacy bicycle creation validates fields and returns both identifiers", async () => {
   const { baseUrl } = await startServer();
-  const invalid = await fetch(`${baseUrl}/api/bicycles`, {
+  const anonymous = await fetch(`${baseUrl}/api/bicycles`, {
     method: "POST",
     headers: { "content-type": "application/json" },
+    body: JSON.stringify({ code: "B-0", currentStation: "Centro", unlockCode: "1" }),
+  });
+  assert.equal(anonymous.status, 401);
+  const client = await fetch(`${baseUrl}/api/bicycles`, {
+    method: "POST",
+    headers: authHeaders("cliente"),
+    body: JSON.stringify({ code: "B-0", currentStation: "Centro", unlockCode: "1" }),
+  });
+  assert.equal(client.status, 403);
+
+  const invalid = await fetch(`${baseUrl}/api/bicycles`, {
+    method: "POST",
+    headers: authHeaders("admin"),
     body: JSON.stringify({ code: "B-1" }),
   });
   assert.equal(invalid.status, 400);
 
   const created = await fetch(`${baseUrl}/api/bicycles`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: authHeaders("admin"),
     body: JSON.stringify({
       code: "B-1",
       currentStation: "Centro",
@@ -119,7 +139,7 @@ test("bicycle request atomically changes an available bicycle to in-use", async 
   const { baseUrl } = await startServer();
   const created = await fetch(`${baseUrl}/api/bicycles`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: authHeaders("admin"),
     body: JSON.stringify({
       code: "B-2",
       currentStation: "Centro",
@@ -130,7 +150,7 @@ test("bicycle request atomically changes an available bicycle to in-use", async 
 
   const request = await fetch(`${baseUrl}/api/bicycles/${data.id}/request`, {
     method: "PATCH",
-    headers: { "content-type": "application/json" },
+    headers: authHeaders("cliente"),
     body: JSON.stringify({ rentedBy: "client@example.com" }),
   });
   const response = await request.json();

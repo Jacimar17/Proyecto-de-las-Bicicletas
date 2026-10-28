@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { UsuarioService } from '../shared/services/usuario.service';
 
 @Component({
@@ -21,15 +22,18 @@ export class LoginComponent {
   error = '';
   cargando = false;
 
-  constructor(private usuarioService: UsuarioService) {}
+  constructor(private usuarioService: UsuarioService, private router: Router) {}
 
   login(): void {
     this.error = '';
     this.cargando = true;
     this.usuarioService.login({ dni: this.dni, password: this.password }).subscribe({
-      next: (usuario) => {
+      next: (response) => {
         this.cargando = false;
-        alert(`Bienvenido, ${usuario.nombre}!`);
+        this.usuarioService.guardarSesion(response);
+        const destino = response.role === 'admin' ? '/admin' :
+          response.role === 'tecnico' ? '/tecnico' : '/mapa';
+        void this.router.navigateByUrl(destino);
       },
       error: (err) => {
         this.cargando = false;

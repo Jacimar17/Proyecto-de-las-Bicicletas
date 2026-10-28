@@ -5,15 +5,43 @@ export interface DatabaseConnection {
   db: Db;
 }
 
-export async function connectDB(): Promise<DatabaseConnection> {
-  const uri = process.env.MONGO_URI;
-  if (!uri) {
-    throw new Error("MONGO_URI must be configured to connect to MongoDB Atlas.");
-  }
+export function getMongoUri(
+  env: Partial<Pick<NodeJS.ProcessEnv, "MONGO_URI" | "DATABASE_URL">> = process.env
+): string {
+  return (
+    env.MONGO_URI?.trim() ||
+    env.DATABASE_URL?.trim() ||
+    "mongodb://127.0.0.1:27017"
+  );
+}
 
-  const client = new MongoClient(uri);
+export function getLocalMongoUri(
+  env: Partial<Pick<NodeJS.ProcessEnv, "LOCAL_MONGO_URI" | "MONGO_URI" | "DATABASE_URL">> = process.env
+): string {
+  return env.LOCAL_MONGO_URI?.trim() || getMongoUri(env);
+}
+
+export function getAtlasUri(env: Partial<Pick<NodeJS.ProcessEnv, "ATLAS_URI">> = process.env): string | undefined {
+  return env.ATLAS_URI?.trim() || undefined;
+}
+
+export async function connectDB(): Promise<DatabaseConnection> {
+  const client = new MongoClient(getLocalMongoUri());
   await client.connect();
 
   const dbName = process.env.MONGO_DB_NAME || "bicicletas_db";
   return { client, db: client.db(dbName) };
+}
+
+/** Optional Atlas client; returns undefined when not configured or unreachable. */
+export async function connectAtlas(): Promise<MongoClient | undefined> {
+  const uri = getAtlasUri();
+  if (!uri) return undefined;
+  const client = new MongoClient(uri, { serverSelectionTimeoutMS: 5000 });
+  try {
+    await client.connect();
+  } catch (error) {
+    console.warn("Atlas unreachable, running local-only:", (error as Error).message);
+  }
+  return client;
 }

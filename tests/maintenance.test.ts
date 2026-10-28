@@ -66,7 +66,7 @@ test("maintenance endpoints require an admin token and update bicycle state", as
   const token = jwt.sign({ id: "admin-id", role: "admin" }, process.env.JWT_SECRET!);
   const created = await fetch(`${baseUrl}/api/bicycles`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
     body: JSON.stringify({
       code: "MAINT-1",
       currentStation: "Centro",
@@ -98,8 +98,16 @@ test("maintenance endpoints require an admin token and update bicycle state", as
   assert.ok(result.data.lastMaintenanceDate);
 });
 
-test("maintenance GET rejects malformed IDs", async () => {
+test("maintenance GET requires staff and rejects malformed IDs", async () => {
   const baseUrl = await startServer();
-  const response = await fetch(`${baseUrl}/api/maintenance/invalid-id`);
+  const url = `${baseUrl}/api/maintenance/invalid-id`;
+  assert.equal((await fetch(url)).status, 401);
+
+  const clientToken = jwt.sign({ id: "c", role: "cliente" }, process.env.JWT_SECRET!);
+  const forbidden = await fetch(url, { headers: { authorization: `Bearer ${clientToken}` } });
+  assert.equal(forbidden.status, 403);
+
+  const techToken = jwt.sign({ id: "t", role: "tecnico" }, process.env.JWT_SECRET!);
+  const response = await fetch(url, { headers: { authorization: `Bearer ${techToken}` } });
   assert.equal(response.status, 400);
 });

@@ -1,11 +1,18 @@
+.mapa-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(340px, .8fr);
+  min-height: calc(100vh - 64px);
+}
+
 .mapa-container {
   position: relative;
-  height: calc(100vh - 64px);
+  min-height: 620px;
 }
 
 #mapa {
-  height: 100%;
   width: 100%;
+  height: 100%;
+  min-height: 620px;
 }
 
 .spinner-overlay {
@@ -14,4 +21,95 @@
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 1000;
+}
+
+.alquiler-panel {
+  overflow-y: auto;
+  max-height: calc(100vh - 64px);
+  padding: 20px;
+  background: #f7f9fb;
+}
+
+.estaciones-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.estacion-card {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #c6d2dd;
+  border-radius: 6px;
+  background: white;
+  color: #263746;
+  text-align: left;
+  cursor: pointer;
+}
+
+.estacion-card.seleccionada {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 1px #1976d2;
+}
+
+.estacion-card:disabled {
+  color: #707b83;
+  cursor: not-allowed;
+}
+
+.detalle,
+.viaje-activo {
+  margin-top: 20px;
+  padding: 14px;
+  border-radius: 6px;
+  background: white;
+}
+
+.reserva,
+.viaje-activo {
+  display: grid;
+  gap: 10px;
+}
+
+select,
+button:not(.estacion-card) {
+  min-height: 38px;
+}
+
+button:not(.estacion-card) {
+  border: 0;
+  border-radius: 4px;
+  padding: 8px 12px;
+  background: #1976d2;
+  color: white;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.error {
+  color: #b71c1c;
+}
+
+.success {
+  color: #1b5e20;
+}
+
+@media (max-width: 850px) {
+  .mapa-page {
+    grid-template-columns: 1fr;
+  }
+
+  .mapa-container,
+  #mapa {
+    min-height: 45vh;
+  }
+
+  .alquiler-panel {
+    max-height: none;
+  }
 }

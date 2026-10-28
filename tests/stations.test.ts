@@ -3,9 +3,16 @@ import { afterEach, test } from "node:test";
 import { AddressInfo } from "node:net";
 import { Server } from "node:http";
 import { Db, ObjectId } from "mongodb";
+import jwt from "jsonwebtoken";
 import { createApp } from "../src/app";
 
 const servers: Server[] = [];
+const jwtSecret = "station-tests-secret";
+process.env.JWT_SECRET = jwtSecret;
+const adminHeaders = {
+  authorization: `Bearer ${jwt.sign({ id: "admin-test", nombre: "Admin", role: "admin" }, jwtSecret)}`,
+  "content-type": "application/json",
+};
 
 function createFakeDb() {
   const collections = new Map<string, Record<string, unknown>[]>();
@@ -89,18 +96,20 @@ test("station CRUD endpoints validate inputs and preserve the Spanish API paths"
   const baseUrl = await startServer();
   const invalid = await fetch(`${baseUrl}/api/estacion`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: adminHeaders,
     body: JSON.stringify({ nombre: "Centro" }),
   });
   assert.equal(invalid.status, 400);
 
   const created = await fetch(`${baseUrl}/api/estacion`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: adminHeaders,
     body: JSON.stringify({
       nombre: " Centro ",
       barrio: "Centro",
       direccion: "San Martín y Belgrano",
+      lat: -33.7456,
+      lng: -61.9688,
       capacidad: 10,
     }),
   });
@@ -123,7 +132,7 @@ test("station CRUD endpoints validate inputs and preserve the Spanish API paths"
 
   const updated = await fetch(`${baseUrl}/api/estacion/${station.id}`, {
     method: "PUT",
-    headers: { "content-type": "application/json" },
+    headers: adminHeaders,
     body: JSON.stringify({ capacidad: 12 }),
   });
   assert.equal(updated.status, 200);
@@ -131,6 +140,7 @@ test("station CRUD endpoints validate inputs and preserve the Spanish API paths"
 
   const deleted = await fetch(`${baseUrl}/api/estacion/${station.id}`, {
     method: "DELETE",
+    headers: adminHeaders,
   });
   assert.equal(deleted.status, 204);
 });
@@ -142,7 +152,7 @@ test("invalid station IDs and updates are rejected", async () => {
 
   const invalidUpdate = await fetch(`${baseUrl}/api/estacion/${new ObjectId()}`, {
     method: "PUT",
-    headers: { "content-type": "application/json" },
+    headers: adminHeaders,
     body: JSON.stringify({ capacidad: "large" }),
   });
   assert.equal(invalidUpdate.status, 400);

@@ -1,6 +1,68 @@
-<div class="mapa-container">
-  <div *ngIf="cargando" class="spinner-overlay">
-    <mat-spinner></mat-spinner>
+<main class="mapa-page">
+  <div class="mapa-container">
+    <div *ngIf="cargando" class="spinner-overlay"><mat-spinner></mat-spinner></div>
+    <div id="mapa"></div>
   </div>
-  <div id="mapa"></div>
-</div>
+
+  <section class="alquiler-panel">
+    <h1>Estaciones y bicicletas disponibles</h1>
+    <p class="error" *ngIf="error" role="alert">{{ error }}</p>
+    <p class="success" *ngIf="mensaje" role="status">{{ mensaje }}</p>
+
+    <div class="estaciones-grid">
+      <button
+        type="button"
+        class="estacion-card"
+        *ngFor="let estacion of estaciones"
+        [class.seleccionada]="estacion.id === estacionIdSeleccionada"
+        [disabled]="!estacion.activa"
+        (click)="seleccionarEstacion(estacion.id ?? '')">
+        <strong>{{ estacion.nombre }}</strong>
+        <span>{{ estacion.direccion }}</span>
+        <span>{{ estacion.activa ? (estacion.disponibles + ' bicicletas disponibles') : 'No habilitada' }}</span>
+      </button>
+    </div>
+
+    <section *ngIf="estacionSeleccionada as estacion" class="detalle">
+      <h2>{{ estacion.nombre }}</h2>
+      <p>{{ estacion.direccion }} · {{ estacion.disponibles }} disponibles de {{ estacion.capacidad }} espacios</p>
+      <h3>Bicicletas disponibles</h3>
+      <p *ngIf="bicicletasDisponibles.length === 0">No hay bicicletas disponibles en esta estación.</p>
+      <ul *ngIf="bicicletasDisponibles.length > 0">
+        <li *ngFor="let bicicleta of bicicletasDisponibles">
+          {{ bicicleta.codigo }} — {{ bicicleta.modelo }}
+        </li>
+      </ul>
+
+      <div *ngIf="esCliente && !viajeActivo && bicicletasDisponibles.length > 0" class="reserva">
+        <label for="bicicleta">Seleccionar bicicleta</label>
+        <select id="bicicleta" [(ngModel)]="bicicletaId">
+          <option value="">Selecciona una bicicleta</option>
+          <option *ngFor="let bicicleta of bicicletasDisponibles" [value]="bicicleta.id">
+            {{ bicicleta.codigo }} — {{ bicicleta.modelo }}
+          </option>
+        </select>
+        <button type="button" [disabled]="!bicicletaId" (click)="comenzarViaje()">Iniciar viaje</button>
+      </div>
+    </section>
+
+    <section *ngIf="esCliente && viajeActivo" class="viaje-activo">
+      <h2>Viaje en curso</h2>
+      <p>Inicio: {{ viajeActivo.fecha_inicio | date:'medium' }}</p>
+      <p>Origen: {{ nombreEstacion(viajeActivo.estacion_origen_id) }}</p>
+      <label for="destino">Estación habilitada de devolución</label>
+      <select id="destino" [(ngModel)]="estacionDestinoId">
+        <option value="">Selecciona una estación</option>
+        <option *ngFor="let destino of estaciones" [value]="destino.id" [disabled]="!destino.activa">
+          {{ destino.nombre }}{{ destino.activa ? '' : ' (no habilitada)' }}
+        </option>
+      </select>
+      <button type="button" [disabled]="!estacionDestinoId" (click)="devolverBicicleta()">Devolver bicicleta</button>
+      <a routerLink="/viajes">Ver historial de viajes</a>
+    </section>
+
+    <p *ngIf="!usuarioService.usuarioActual">
+      <a routerLink="/login">Inicia sesión</a> para alquilar una bicicleta.
+    </p>
+  </section>
+</main>

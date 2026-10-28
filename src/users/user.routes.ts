@@ -3,10 +3,12 @@ import { Db } from "mongodb";
 import { authenticate, requireAdmin } from "../auth/auth.middleware";
 import { UserController } from "./user.controller";
 import { UserRepositoryMongo } from "./user.repository.mongo";
+import { UserService } from "./user.service";
 
 export function createUserRoutes(db: Db): Router {
   const router = Router();
-  const controller = new UserController(new UserRepositoryMongo(db));
+  const service = new UserService(new UserRepositoryMongo(db));
+  const controller = new UserController(service);
 
   router.post("/login", controller.login);
   router.post("/registro", controller.create);

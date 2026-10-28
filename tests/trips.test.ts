@@ -70,15 +70,16 @@ function createFakeDb() {
   };
 }
 
-async function startServer(score = 10) {
+async function startServer(score = 10, accountCollection: "users" | "usuarios" = "users") {
   process.env.JWT_SECRET = "test-secret-for-trip-tests";
   const fakeDb = createFakeDb();
   const userId = new ObjectId();
-  await fakeDb.collection("users").insertOne({
+  await fakeDb.collection(accountCollection).insertOne({
     _id: userId,
     puntuacion: score,
     suspendidoHasta: null,
     bloqueado: false,
+    role: "cliente",
   });
   const db = fakeDb as unknown as Db;
   const server = createApp(db).listen(0);
@@ -87,7 +88,22 @@ async function startServer(score = 10) {
   const address = server.address() as AddressInfo;
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
-    token: jwt.sign({ id: userId.toString(), role: "cliente" }, process.env.JWT_SECRET),
+    token: jwt.sign({
+      id: userId.toString(),
+      name: "Cliente",
+      nombre: "Cliente",
+      role: "cliente",
+      accountCollection,
+    }, process.env.JWT_SECRET),
+    adminHeaders: {
+      authorization: `Bearer ${jwt.sign({
+        id: new ObjectId().toString(),
+        name: "Admin",
+        nombre: "Admin",
+        role: "admin",
+      }, process.env.JWT_SECRET)}`,
+      "content-type": "application/json",
+    },
     fakeDb,
     userId,
   };
@@ -107,6 +123,8 @@ async function createStationAndBicycle(
       barrio: stationName,
       direccion: `Calle ${stationName}`,
       capacidad: 10,
+      lat: -34,
+      lng: -58,
     }),
   });
   const station = await stationResponse.json();
@@ -138,7 +156,7 @@ afterEach(async () => {
 });
 
 test("authenticated client can start, return, and review a trip", async () => {
-  const { baseUrl, token } = await startServer(9);
+  const { baseUrl, token, adminHeaders } = await startServer(9);
   const headers = {
     authorization: `Bearer ${token}`,
     "content-type": "application/json",
@@ -146,29 +164,33 @@ test("authenticated client can start, return, and review a trip", async () => {
 
   const originResponse = await fetch(`${baseUrl}/api/estacion`, {
     method: "POST",
-    headers,
+    headers: adminHeaders,
     body: JSON.stringify({
       nombre: "Centro",
       barrio: "Centro",
       direccion: "Calle 1",
       capacidad: 10,
+      lat: -34,
+      lng: -58,
     }),
   });
   const origin = await originResponse.json();
   const destinationResponse = await fetch(`${baseUrl}/api/estacion`, {
     method: "POST",
-    headers,
+    headers: adminHeaders,
     body: JSON.stringify({
       nombre: "Norte",
       barrio: "Norte",
       direccion: "Calle 2",
       capacidad: 10,
+      lat: -34,
+      lng: -58,
     }),
   });
   const destination = await destinationResponse.json();
   const bicycleResponse = await fetch(`${baseUrl}/api/bicicleta`, {
     method: "POST",
-    headers,
+    headers: adminHeaders,
     body: JSON.stringify({
       codigo: "B-101",
       modelo: "Urbana",
@@ -189,8 +211,8 @@ test("authenticated client can start, return, and review a trip", async () => {
   assert.equal(started.data.estacionOrigenId, origin.id);
   assert.ok(started.data.fechaInicio);
 
-  const activeBicycleResponse = await fetch(`${baseUrl}/api/estacion/${origin.id}`);
-  const activeBicycle = (await activeBicycleResponse.json()).bicicletas[0];
+  const bicyclesResponse = await fetch(`${baseUrl}/api/bicicletas`);
+  const activeBicycle = (await bicyclesResponse.json()).find((item: { id: string }) => item.id === bicycle.id);
   assert.equal(activeBicycle.estado, "EN_USO");
 
   const finish = await fetch(`${baseUrl}/api/viajes/${started.data.id}/devolver`, {
@@ -220,12 +242,12 @@ test("authenticated client can start, return, and review a trip", async () => {
 });
 
 test("slow rides subtract a point, suspend at four, and block further rentals during suspension", async () => {
-  const { baseUrl, token, fakeDb, userId } = await startServer(5);
+  const { baseUrl, token, fakeDb, userId, adminHeaders } = await startServer(5);
   const headers = {
     authorization: `Bearer ${token}`,
     "content-type": "application/json",
   };
-  const { station, bicycle } = await createStationAndBicycle(baseUrl, headers, "Centro", "B-201");
+  const { station, bicycle } = await createStationAndBicycle(baseUrl, adminHeaders, "Centro", "B-201");
   const start = await fetch(`${baseUrl}/api/viajes`, {
     method: "POST",
     headers,
@@ -235,7 +257,7 @@ test("slow rides subtract a point, suspend at four, and block further rentals du
   const startedAt = new Date(Date.now() - 3 * 60 * 60 * 1000 - 1);
   await fakeDb.collection("viajes").findOneAndUpdate(
     { _id: new ObjectId(started.data.id) },
-    { $set: { fechaInicio: startedAt } }
+    { $set: { fecha_inicio: startedAt } }
   );
 
   const finish = await fetch(`${baseUrl}/api/viajes/${started.data.id}/devolver`, {
@@ -261,12 +283,12 @@ test("slow rides subtract a point, suspend at four, and block further rentals du
 });
 
 test("reaching one point permanently blocks the account from starting trips", async () => {
-  const { baseUrl, token, fakeDb, userId } = await startServer(2);
+  const { baseUrl, token, fakeDb, userId, adminHeaders } = await startServer(2);
   const headers = {
     authorization: `Bearer ${token}`,
     "content-type": "application/json",
   };
-  const { station, bicycle } = await createStationAndBicycle(baseUrl, headers, "Oeste", "B-202");
+  const { station, bicycle } = await createStationAndBicycle(baseUrl, adminHeaders, "Oeste", "B-202");
   const start = await fetch(`${baseUrl}/api/viajes`, {
     method: "POST",
     headers,
@@ -275,7 +297,7 @@ test("reaching one point permanently blocks the account from starting trips", as
   const started = await start.json();
   await fakeDb.collection("viajes").findOneAndUpdate(
     { _id: new ObjectId(started.data.id) },
-    { $set: { fechaInicio: new Date(Date.now() - 4 * 60 * 60 * 1000) } }
+    { $set: { fecha_inicio: new Date(Date.now() - 4 * 60 * 60 * 1000) } }
   );
   const finish = await fetch(`${baseUrl}/api/viajes/${started.data.id}/devolver`, {
     method: "PATCH",
@@ -298,8 +320,34 @@ test("reaching one point permanently blocks the account from starting trips", as
   assert.equal(storedUser?.bloqueado, true);
 });
 
+test("the trip score updates accounts registered in the Spanish usuarios collection", async () => {
+  const { baseUrl, token, fakeDb, userId, adminHeaders } = await startServer(9, "usuarios");
+  const headers = {
+    authorization: `Bearer ${token}`,
+    "content-type": "application/json",
+  };
+  const { station, bicycle } = await createStationAndBicycle(baseUrl, adminHeaders, "Este", "B-203");
+  const start = await fetch(`${baseUrl}/api/viajes`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ bicicletaId: bicycle.id }),
+  });
+  const started = await start.json();
+  const finish = await fetch(`${baseUrl}/api/viajes/${started.data.id}/devolver`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ estacionDestinoId: station.id }),
+  });
+  const finished = await finish.json();
+
+  assert.equal(finish.status, 200);
+  assert.equal(finished.puntuacion, 10);
+  const storedUser = await fakeDb.collection("usuarios").findOne({ _id: userId });
+  assert.equal(storedUser?.puntuacion, 10);
+});
+
 test("trip endpoints require authentication and reject disabled return stations", async () => {
-  const { baseUrl, token } = await startServer();
+  const { baseUrl, token, adminHeaders } = await startServer();
   const unauthenticated = await fetch(`${baseUrl}/api/viajes/mis-viajes`);
   assert.equal(unauthenticated.status, 401);
 
@@ -309,34 +357,38 @@ test("trip endpoints require authentication and reject disabled return stations"
   };
   const originResponse = await fetch(`${baseUrl}/api/estacion`, {
     method: "POST",
-    headers,
+    headers: adminHeaders,
     body: JSON.stringify({
       nombre: "Sur",
       barrio: "Sur",
       direccion: "Calle 3",
       capacidad: 10,
+      lat: -34,
+      lng: -58,
     }),
   });
   const origin = await originResponse.json();
   const disabledResponse = await fetch(`${baseUrl}/api/estacion`, {
     method: "POST",
-    headers,
+    headers: adminHeaders,
     body: JSON.stringify({
       nombre: "Cerrada",
       barrio: "Centro",
       direccion: "Calle 4",
       capacidad: 10,
+      lat: -34,
+      lng: -58,
     }),
   });
   const disabled = await disabledResponse.json();
   await fetch(`${baseUrl}/api/estacion/${disabled.id}`, {
     method: "PUT",
-    headers,
+    headers: adminHeaders,
     body: JSON.stringify({ activa: false }),
   });
   const bicycleResponse = await fetch(`${baseUrl}/api/bicicleta`, {
     method: "POST",
-    headers,
+    headers: adminHeaders,
     body: JSON.stringify({
       codigo: "B-102",
       modelo: "Urbana",

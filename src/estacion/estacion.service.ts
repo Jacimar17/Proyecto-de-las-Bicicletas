@@ -15,7 +15,6 @@ export interface EstacionDetalle extends Estacion {
 export class EstacionNoEncontradaError extends Error {}
 
 export class EstacionService {
-
     constructor(
         private readonly estacionRepository: EstacionRepository,
         private readonly bicicletaRepository: BicicletaRepository
@@ -23,11 +22,14 @@ export class EstacionService {
 
     async getAll(): Promise<EstacionResumen[]> {
         const estaciones = await this.estacionRepository.findAll();
-        return Promise.all(estaciones.map(async (estacion) => {
+        return Promise.all(estaciones.map(async estacion => {
             if (!estacion.id) throw new Error('La estación no tiene identificador');
             const bicicletas = await this.bicicletaRepository.findByEstacion(estacion.id);
-            const disponibles = bicicletas.filter(b => b.estado === 'DISPONIBLE').length;
-            return { ...estacion, total_bicicletas: bicicletas.length, disponibles };
+            return {
+                ...estacion,
+                total_bicicletas: bicicletas.length,
+                disponibles: bicicletas.filter(bicicleta => bicicleta.estado === 'DISPONIBLE').length
+            };
         }));
     }
 
@@ -35,31 +37,52 @@ export class EstacionService {
         const estacion = await this.estacionRepository.findById(id);
         if (!estacion) throw new EstacionNoEncontradaError('Estación no encontrada');
         const bicicletas = await this.bicicletaRepository.findByEstacion(id);
-        const disponibles = bicicletas.filter(b => b.estado === 'DISPONIBLE').length;
+        const disponibles = bicicletas.filter(bicicleta => bicicleta.estado === 'DISPONIBLE').length;
         return { ...estacion, bicicletas, disponibles };
     }
 
     async create(data: Estacion): Promise<Estacion> {
-        this.validar(data);
+        const estacion = { ...data, activa: data.activa ?? true };
+        this.validar(estacion);
         return this.estacionRepository.create({
-            nombre: data.nombre.trim(),
-            barrio: data.barrio.trim(),
-            direccion: data.direccion.trim(),
-            capacidad: data.capacidad,
-            activa: true,
+            ...estacion,
+            nombre: estacion.nombre.trim(),
+            barrio: estacion.barrio.trim(),
+            direccion: estacion.direccion.trim()
         });
     }
 
     async update(id: string, data: Partial<Estacion>): Promise<Estacion> {
         this.validarActualizacion(data);
-        const actualizada = await this.estacionRepository.update(id, data);
+        const existente = await this.estacionRepository.findById(id);
+        if (!existente) throw new EstacionNoEncontradaError('Estación no encontrada');
+
+        const actualizadaData = { ...existente, ...data };
+        this.validar(actualizadaData);
+        const bicicletas = await this.bicicletaRepository.findByEstacion(id);
+        if (actualizadaData.capacidad < bicicletas.length) {
+            throw new Error('La capacidad no puede ser menor a las bicicletas asignadas');
+        }
+
+        const updates: Partial<Estacion> = {
+            ...data,
+            ...(data.nombre !== undefined ? { nombre: data.nombre.trim() } : {}),
+            ...(data.barrio !== undefined ? { barrio: data.barrio.trim() } : {}),
+            ...(data.direccion !== undefined ? { direccion: data.direccion.trim() } : {})
+        };
+        const actualizada = await this.estacionRepository.update(id, updates);
         if (!actualizada) throw new EstacionNoEncontradaError('Estación no encontrada');
         return actualizada;
     }
 
     async delete(id: string): Promise<void> {
-        const eliminada = await this.estacionRepository.delete(id);
-        if (!eliminada) throw new EstacionNoEncontradaError('Estación no encontrada');
+        const existente = await this.estacionRepository.findById(id);
+        if (!existente) throw new EstacionNoEncontradaError('Estación no encontrada');
+        const bicicletas = await this.bicicletaRepository.findByEstacion(id);
+        if (bicicletas.length > 0) throw new Error('No se puede eliminar una estación con bicicletas asignadas');
+        if (!await this.estacionRepository.delete(id)) {
+            throw new EstacionNoEncontradaError('Estación no encontrada');
+        }
     }
 
     private validar(data: Estacion): void {
@@ -69,6 +92,13 @@ export class EstacionService {
         if (!Number.isInteger(data.capacidad) || data.capacidad < 1) {
             throw new Error('La capacidad debe ser un número entero mayor a 0');
         }
+        if (!Number.isFinite(data.lat) || data.lat < -90 || data.lat > 90) {
+            throw new Error('La latitud no es válida');
+        }
+        if (!Number.isFinite(data.lng) || data.lng < -180 || data.lng > 180) {
+            throw new Error('La longitud no es válida');
+        }
+        if (typeof data.activa !== 'boolean') throw new Error('El estado de la estación no es válido');
     }
 
     private validarActualizacion(data: Partial<Estacion>): void {
@@ -77,7 +107,16 @@ export class EstacionService {
         if (data.barrio !== undefined && !data.barrio.trim()) throw new Error('El barrio es obligatorio');
         if (data.direccion !== undefined && !data.direccion.trim()) throw new Error('La dirección es obligatoria');
         if (data.capacidad !== undefined && (!Number.isInteger(data.capacidad) || data.capacidad < 1)) {
-            throw new Error('La capacidad debe ser mayor a 0');
+            throw new Error('La capacidad debe ser un número entero mayor a 0');
+        }
+        if (data.lat !== undefined && (!Number.isFinite(data.lat) || data.lat < -90 || data.lat > 90)) {
+            throw new Error('La latitud no es válida');
+        }
+        if (data.lng !== undefined && (!Number.isFinite(data.lng) || data.lng < -180 || data.lng > 180)) {
+            throw new Error('La longitud no es válida');
+        }
+        if (data.activa !== undefined && typeof data.activa !== 'boolean') {
+            throw new Error('El estado de la estación no es válido');
         }
     }
 }

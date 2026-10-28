@@ -2,9 +2,12 @@
   <span>🚲 Bicicletas Compartidas</span>
   <span class="spacer"></span>
   <a mat-button routerLink="/mapa">Mapa</a>
-  <a mat-button routerLink="/admin">Admin</a>
-  <a mat-button routerLink="/login">Login</a>
-  <a mat-button routerLink="/registro">Registro</a>
+  <a mat-button routerLink="/viajes" *ngIf="usuarioService.usuarioActual?.role === 'cliente'">Mis viajes</a>
+  <a mat-button routerLink="/admin" *ngIf="usuarioService.usuarioActual?.role === 'admin'">Administración</a>
+  <a mat-button routerLink="/tecnico" *ngIf="usuarioService.usuarioActual?.role === 'tecnico'">Mantenimiento</a>
+  <a mat-button routerLink="/login" *ngIf="!usuarioService.usuarioActual">Ingresar</a>
+  <a mat-button routerLink="/registro" *ngIf="!usuarioService.usuarioActual">Registrarse</a>
+  <button mat-button *ngIf="usuarioService.usuarioActual" (click)="cerrarSesion()">Cerrar sesión</button>
 </mat-toolbar>
 
 <router-outlet />

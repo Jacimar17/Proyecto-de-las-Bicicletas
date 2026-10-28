@@ -1,15 +1,16 @@
 import { Router } from "express";
 import { Db } from "mongodb";
-import { authenticate, requireAdmin } from "../auth/auth.middleware";
+import { authenticate, requireRole } from "../auth/auth.middleware";
 import { MaintenanceController } from "./maintenance.controller";
 
 export function createMaintenanceRoutes(db: Db): Router {
   const router = Router();
   const controller = new MaintenanceController(db);
 
-  router.get("/:id", controller.getById);
-  router.patch("/:id/suitable", authenticate, requireAdmin, controller.markSuitable);
-  router.patch("/:id/not-suitable", authenticate, requireAdmin, controller.markNotSuitable);
+  const staff = requireRole("admin", "tecnico");
+  router.get("/:id", authenticate, staff, controller.getById);
+  router.patch("/:id/suitable", authenticate, staff, controller.markSuitable);
+  router.patch("/:id/not-suitable", authenticate, staff, controller.markNotSuitable);
 
   return router;
 }

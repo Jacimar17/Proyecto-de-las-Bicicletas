@@ -73,6 +73,16 @@ export class EstacionController {
             }
             updates.capacidad = capacidad;
         }
+        for (const field of ['lat', 'lng'] as const) {
+            const value: unknown = req.body[field];
+            if (value !== undefined) {
+                if (typeof value !== 'number' || !Number.isFinite(value)) {
+                    res.status(400).json({ message: `El campo ${field} debe ser un número` });
+                    return;
+                }
+                updates[field] = value;
+            }
+        }
         if (req.body.activa !== undefined) {
             const activa: unknown = req.body.activa;
             if (typeof activa !== 'boolean') {

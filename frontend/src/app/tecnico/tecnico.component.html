@@ -1,0 +1,40 @@
+<main class="tecnico-container">
+  <h1>Gestión de mantenimiento</h1>
+  <p>Selecciona una bicicleta por su código o ID para actualizar su estado.</p>
+  <p class="error" *ngIf="error" role="alert">{{ error }}</p>
+  <p class="success" *ngIf="mensaje" role="status">{{ mensaje }}</p>
+
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Código</th><th>Modelo</th><th>Ubicación</th><th>Estado</th><th>Última actualización</th><th>Acciones</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let bicicleta of bicicletas">
+          <td>{{ bicicleta.id }}</td><td>{{ bicicleta.codigo }}</td><td>{{ bicicleta.modelo }}</td><td>{{ bicicleta.ubicacion }}</td>
+          <td>{{ bicicleta.estado }}</td>
+          <td>{{ bicicleta.fecha_ultima_revision ? (bicicleta.fecha_ultima_revision | date:'short') : '—' }}</td>
+          <td class="acciones">
+            <button type="button" [disabled]="bicicleta.estado === 'DISPONIBLE'" (click)="actualizar(bicicleta, 'DISPONIBLE')">Marcar disponible</button>
+            <button type="button" class="warning" [disabled]="bicicleta.estado === 'EN_MANTENIMIENTO'" (click)="actualizar(bicicleta, 'EN_MANTENIMIENTO')">En mantenimiento</button>
+          </td>
+        </tr>
+        <tr *ngIf="bicicletas.length === 0"><td colspan="7">No hay bicicletas registradas.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Registro de mantenimiento</h2>
+  <div class="tabla-wrap">
+    <table>
+      <thead><tr><th>Bicicleta</th><th>Cambio de estado</th><th>Fecha</th><th>Técnico responsable</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let registro of mantenimientos">
+          <td>{{ registro.bicicleta_id }}</td>
+          <td>{{ registro.estado_anterior }} → {{ registro.estado_nuevo }}</td>
+          <td>{{ registro.fecha_actualizacion | date:'medium' }}</td>
+          <td>{{ registro.tecnico_responsable }} ({{ registro.tecnico_id }})</td>
+        </tr>
+        <tr *ngIf="mantenimientos.length === 0"><td colspan="4">Todavía no hay actualizaciones registradas.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>

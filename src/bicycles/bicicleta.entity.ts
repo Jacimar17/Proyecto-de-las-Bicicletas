@@ -2,6 +2,7 @@ export type EstadoBicicleta =
     | 'DISPONIBLE'
     | 'RESERVADA'
     | 'EN_USO'
+    | 'EN_MANTENIMIENTO'
     | 'APTA'
     | 'NO_APTA';
 
