@@ -15,6 +15,7 @@ import { MantenimientoController } from './mantenimiento/mantenimiento.controlle
 import { MantenimientoRepositoryMongo } from './mantenimiento/mantenimiento.repository.mongo';
 import { MantenimientoRoutes } from './mantenimiento/mantenimiento.routes';
 import { MantenimientoService } from './mantenimiento/mantenimiento.service';
+import { crearPuntosMantenimientoRoutes } from './mantenimiento/puntos-mantenimiento.routes';
 import { crearTareasMantenimientoRoutes } from './mantenimiento/tarea-mantenimiento.routes';
 import { UsuarioController } from './usuario/usuario.controller';
 import { UsuarioRepositoryMongo } from './usuario/usuario.repository.mongo';
@@ -93,6 +94,7 @@ export function createApp(db: Db, sync?: SyncService): Express {
   app.use('/api', viajeRoutes.router);
   app.use('/api', mantenimientoRoutes.router);
   app.use('/api', crearTareasMantenimientoRoutes(db));
+  app.use('/api', crearPuntosMantenimientoRoutes(db));
 
   app.use('/api', createBicycleRoutes(db));
   app.use('/api/maintenance', createMaintenanceRoutes(db));

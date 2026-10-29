@@ -14,7 +14,7 @@ export function createUserRoutes(db: Db): Router {
   router.post("/login/google", controller.loginGoogle);
   router.post("/registro", controller.create);
   router.post("/", controller.create);
-  router.get("/", authenticate, controller.getAll);
+  router.get("/", authenticate, requireAdmin, controller.getAll);
   router.get("/:id", authenticate, requireAdmin, controller.getById);
   router.put("/:id", authenticate, requireAdmin, controller.update);
   router.delete("/:id", authenticate, requireAdmin, controller.delete);

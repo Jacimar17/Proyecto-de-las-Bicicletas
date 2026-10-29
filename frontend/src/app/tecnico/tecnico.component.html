@@ -40,34 +40,34 @@
     </div>
 
     <div class="taller">
-      <svg class="bici-svg" viewBox="0 0 600 340" role="group" aria-label="Diagrama de la bicicleta">
-        <g class="trazo">
-          <circle cx="130" cy="240" r="80" />
-          <circle cx="470" cy="240" r="80" />
-          <path d="M130 240 L285 240 L240 120 Z" />
-          <path d="M240 120 L430 130 L285 240" />
-          <path d="M430 130 L470 240" />
-          <path d="M240 120 L225 98 M205 98 L250 98" />
-          <path d="M430 130 L418 92 M398 88 L448 96" />
-          <circle cx="285" cy="240" r="18" />
-          <path d="M130 240 L285 222 M130 240 L285 258" class="cadena-trazo" />
-        </g>
-        <g *ngFor="let punto of [
-            { id: 'asiento', x: 225, y: 78 },
-            { id: 'manubrio', x: 420, y: 70 },
-            { id: 'frenos', x: 435, y: 190 },
-            { id: 'cadena', x: 205, y: 262 },
-            { id: 'rueda_trasera', x: 130, y: 140 },
-            { id: 'rueda_delantera', x: 470, y: 140 }
-          ]"
-          class="hotspot" [class.activo]="zonaActiva === punto.id" [class.con-tareas]="cantidadZona(punto.id) > 0"
-          role="button" tabindex="0" [attr.aria-label]="etiquetaZona(punto.id)"
-          (click)="seleccionarZona($any(punto.id))" (keydown.enter)="seleccionarZona($any(punto.id))" (keydown.space)="seleccionarZona($any(punto.id)); $event.preventDefault()">
-          <circle [attr.cx]="punto.x" [attr.cy]="punto.y" r="17" />
-          <text [attr.x]="punto.x" [attr.y]="punto.y + 5" text-anchor="middle">{{ cantidadZona(punto.id) || '+' }}</text>
-          <title>{{ etiquetaZona(punto.id) }}</title>
-        </g>
-      </svg>
+      <div class="bici-wrapper">
+        <div class="editor-barra">
+          <button type="button" class="btn-editor" (click)="alternarEdicion()">{{ modoEdicion ? 'Salir del modo edicion' : 'Editar puntos' }}</button>
+          <ng-container *ngIf="modoEdicion">
+            <button type="button" class="btn-editor primario" [disabled]="!hayCambios || guardandoPuntos" (click)="guardarPosiciones()">Guardar posiciones</button>
+            <button type="button" class="btn-editor" [disabled]="!hayCambios" (click)="descartarCambios()">Descartar</button>
+            <select [(ngModel)]="zonaNueva" aria-label="Zona del nuevo punto">
+              <option *ngFor="let zona of zonas" [value]="zona.id">{{ zona.etiqueta }}</option>
+            </select>
+            <button type="button" class="btn-editor" [class.activo]="agregando" (click)="agregando = !agregando">{{ agregando ? 'Tocar la imagen...' : 'Agregar punto' }}</button>
+            <button type="button" class="btn-editor peligro" [disabled]="!puntoSeleccionado" (click)="eliminarPunto()">Eliminar punto</button>
+          </ng-container>
+        </div>
+        <div #imagenBici class="bici-imagen" [class.editando]="modoEdicion" (click)="clickImagen($event)">
+          <img src="/assets/bicicleta-mantenimiento.jpg" alt="Bicicleta en el taller de mantenimiento" draggable="false" />
+          <button *ngFor="let punto of puntos; trackBy: trackPunto" type="button"
+            class="hotspot" [class.activo]="zonaActiva === punto.zona" [class.seleccionado]="modoEdicion && puntoSeleccionado === punto.id"
+            [class.con-tareas]="cantidadZona(punto.zona) > 0" [class.arrastrando]="arrastrandoId === punto.id"
+            [style.left.%]="punto.x" [style.top.%]="punto.y" [attr.aria-label]="punto.nombre"
+            [title]="punto.nombre + (modoEdicion ? ' (' + (punto.x | number:'1.0-1') + '%, ' + (punto.y | number:'1.0-1') + '%)' : '')"
+            (click)="clickPunto($event, punto)"
+            (pointerdown)="iniciarArrastre($event, punto)" (pointermove)="arrastrar($event, punto)"
+            (pointerup)="terminarArrastre($event)" (pointercancel)="terminarArrastre($event)">
+            {{ modoEdicion ? '&#8596;' : (cantidadZona(punto.zona) || '+') }}
+          </button>
+        </div>
+        <p class="ayuda-edicion" *ngIf="modoEdicion">Arrastra un punto para moverlo o selecciona uno y toca la imagen para reubicarlo. Las posiciones se guardan en % de la imagen.</p>
+      </div>
 
       <aside class="menu-tareas">
         <h3>{{ zonaActiva ? etiquetaZona(zonaActiva) : 'Zona sin seleccionar' }}</h3>

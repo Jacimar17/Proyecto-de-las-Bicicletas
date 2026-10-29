@@ -75,6 +75,9 @@ export class UsuarioService {
     async createByAdmin(data: {
         dni: string; nombre: string; email: string; password: string; role?: RolUsuario; bloqueado?: boolean;
     }): Promise<UsuarioPublico> {
+        if (data.role !== undefined && data.role !== 'admin' && data.role !== 'cliente' && data.role !== 'tecnico') {
+            throw new ApiError('El rol no es válido', 400);
+        }
         const user = await this.register(data);
         if (data.role === undefined && data.bloqueado === undefined) return user;
         const saved = await this.repository.findByDni(data.dni.trim());

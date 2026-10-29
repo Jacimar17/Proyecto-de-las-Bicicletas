@@ -7,4 +7,5 @@ export const COLLECTIONS = {
   unlockCodes: "unlock_codes",
   maintenances: "maintenances",
   maintenanceTasks: "maintenance_tasks",
+  maintenancePoints: "maintenance_points",
 } as const;
