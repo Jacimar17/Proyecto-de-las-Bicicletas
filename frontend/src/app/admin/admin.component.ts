@@ -7,6 +7,7 @@ import { Estacion, EstacionService } from '../shared/services/estacion.service';
 import { RolUsuario, Usuario, UsuarioService } from '../shared/services/usuario.service';
 import { Viaje, ViajeService } from '../shared/services/viaje.service';
 import { Mantenimiento, MantenimientoService } from '../shared/services/mantenimiento.service';
+import { NotificationService } from '../shared/notification.service';
 
 type SeccionAdmin = 'usuarios' | 'bicicletas' | 'estaciones' | 'viajes' | 'mantenimientos';
 
@@ -25,8 +26,7 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   viajes: Viaje[] = [];
   mantenimientos: Mantenimiento[] = [];
   seleccionado: string | null = null;
-  error = '';
-  mensaje = '';
+
 
   usuarioForm = {
     dni: '', nombre: '', email: '', password: '', role: 'cliente' as RolUsuario, bloqueado: false
@@ -54,7 +54,8 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
     private readonly usuarioService: UsuarioService,
     private readonly viajeService: ViajeService,
     private readonly mantenimientoService: MantenimientoService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly notifications: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -113,8 +114,6 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   guardar(): void {
-    this.error = '';
-    this.mensaje = '';
     if (this.seccion === 'usuarios') this.guardarUsuario();
     else if (this.seccion === 'bicicletas') this.guardarBicicleta();
     else if (this.seccion === 'estaciones') this.guardarEstacion();
@@ -126,10 +125,14 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   eliminarUsuario(usuario: Usuario): void {
-    if (!usuario.id || !confirm(`¿Eliminar al usuario ${usuario.nombre}?`)) return;
-    this.usuarioService.delete(usuario.id).subscribe({
-      next: () => { this.mensaje = 'Usuario eliminado'; this.cargarUsuarios(); },
-      error: error => this.mostrarError(error)
+    if (!usuario.id) return;
+    const id = usuario.id;
+    void this.notifications.confirm(`¿Eliminar al usuario ${usuario.nombre}?`, 'Eliminar usuario').then(ok => {
+      if (!ok) return;
+      this.usuarioService.delete(id).subscribe({
+        next: () => { this.notifications.success('Usuario eliminado'); this.cargarUsuarios(); },
+        error: error => this.mostrarError(error)
+      });
     });
   }
 
@@ -139,10 +142,14 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   eliminarBicicleta(bicicleta: Bicicleta): void {
-    if (!bicicleta.id || !confirm(`¿Eliminar la bicicleta ${bicicleta.codigo}?`)) return;
-    this.bicicletaService.delete(bicicleta.id).subscribe({
-      next: () => { this.mensaje = 'Bicicleta eliminada'; this.cargarBicicletas(); this.cargarEstaciones(); },
-      error: error => this.mostrarError(error)
+    if (!bicicleta.id) return;
+    const id = bicicleta.id;
+    void this.notifications.confirm(`¿Eliminar la bicicleta ${bicicleta.codigo}?`, 'Eliminar bicicleta').then(ok => {
+      if (!ok) return;
+      this.bicicletaService.delete(id).subscribe({
+        next: () => { this.notifications.success('Bicicleta eliminada'); this.cargarBicicletas(); this.cargarEstaciones(); },
+        error: error => this.mostrarError(error)
+      });
     });
   }
 
@@ -161,10 +168,14 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   eliminarEstacion(estacion: Estacion): void {
-    if (!estacion.id || !confirm(`¿Eliminar la estación ${estacion.nombre}?`)) return;
-    this.estacionService.delete(estacion.id).subscribe({
-      next: () => { this.mensaje = 'Estación eliminada'; this.cargarEstaciones(); },
-      error: error => this.mostrarError(error)
+    if (!estacion.id) return;
+    const id = estacion.id;
+    void this.notifications.confirm(`¿Eliminar la estación ${estacion.nombre}?`, 'Eliminar estación').then(ok => {
+      if (!ok) return;
+      this.estacionService.delete(id).subscribe({
+        next: () => { this.notifications.success('Estación eliminada'); this.cargarEstaciones(); },
+        error: error => this.mostrarError(error)
+      });
     });
   }
 
@@ -180,8 +191,6 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
       capacidad: 10, activa: true
     };
     this.actualizarMarcadorEstacion(true);
-    this.error = '';
-    this.mensaje = '';
   }
 
   seleccionarCoordenadas(lat: number, lng: number): void {
@@ -204,7 +213,7 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
       ? this.usuarioService.update(this.seleccionado, { ...datos, ...(password ? { password } : {}) })
       : this.usuarioService.create({ ...datos, password });
     request.subscribe({
-      next: () => { this.mensaje = 'Usuario guardado'; this.limpiarFormulario(); this.cargarUsuarios(); },
+      next: () => { this.notifications.success('Usuario guardado'); this.limpiarFormulario(); this.cargarUsuarios(); },
       error: error => this.mostrarError(error)
     });
   }
@@ -217,7 +226,7 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
       ? this.bicicletaService.update(this.seleccionado, form)
       : this.bicicletaService.create(form);
     request.subscribe({
-      next: () => { this.mensaje = 'Bicicleta guardada'; this.limpiarFormulario(); this.cargarBicicletas(); this.cargarEstaciones(); },
+      next: () => { this.notifications.success('Bicicleta guardada'); this.limpiarFormulario(); this.cargarBicicletas(); this.cargarEstaciones(); },
       error: error => this.mostrarError(error)
     });
   }
@@ -227,7 +236,7 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
       ? this.estacionService.update(this.seleccionado, this.estacionForm)
       : this.estacionService.create(this.estacionForm);
     request.subscribe({
-      next: () => { this.mensaje = 'Estación guardada'; this.limpiarFormulario(); this.cargarEstaciones(); },
+      next: () => { this.notifications.success('Estación guardada'); this.limpiarFormulario(); this.cargarEstaciones(); },
       error: error => this.mostrarError(error)
     });
   }
@@ -292,9 +301,8 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
       && Number.isFinite(lng) && lng >= -180 && lng <= 180;
   }
 
-  private mostrarError(error: { error?: { message?: string } }): void {
-    this.error = error.error?.message ?? 'No se pudo completar la operación';
-    this.mensaje = '';
-        this.cdr.markForCheck();
-      }
+  private mostrarError(error: { status?: number; error?: { message?: string } }): void {
+    this.notifications.httpError(error);
+    this.cdr.markForCheck();
+  }
 }

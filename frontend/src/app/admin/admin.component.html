@@ -13,8 +13,7 @@
     <button type="button" [class.active]="seccion === 'mantenimientos'" (click)="cambiarSeccion('mantenimientos')">Mantenimientos</button>
   </nav>
 
-  <p class="error" *ngIf="error" role="alert">{{ error }}</p>
-  <p class="success" *ngIf="mensaje" role="status">{{ mensaje }}</p>
+
 
   <section *ngIf="seccion === 'usuarios'">
     <h2>{{ seleccionado ? 'Modificar usuario' : 'Agregar usuario' }}</h2>

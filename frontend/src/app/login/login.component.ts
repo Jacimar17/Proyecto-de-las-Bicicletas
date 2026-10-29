@@ -7,6 +7,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Router } from '@angular/router';
 import { LoginResponse, UsuarioService } from '../shared/services/usuario.service';
+import { NotificationService } from '../shared/notification.service';
 import { GOOGLE_CLIENT_ID } from '../shared/google-config';
 
 @Component({
@@ -21,12 +22,11 @@ export class LoginComponent implements AfterViewInit {
 
   dni = '';
   password = '';
-  error = '';
   cargando = false;
 
   readonly googleHabilitado = !!GOOGLE_CLIENT_ID;
 
-  constructor(private usuarioService: UsuarioService, private router: Router, private zone: NgZone) {}
+  constructor(private usuarioService: UsuarioService, private router: Router, private zone: NgZone, private notifications: NotificationService) {}
 
   ngAfterViewInit(): void {
     if (!GOOGLE_CLIENT_ID) return;
@@ -48,13 +48,11 @@ export class LoginComponent implements AfterViewInit {
   }
 
   login(): void {
-    this.error = '';
     this.cargando = true;
     this.usuarioService.login({ dni: this.dni, password: this.password }).subscribe(this.observador());
   }
 
   private loginGoogle(credential: string): void {
-    this.error = '';
     this.cargando = true;
     this.usuarioService.loginGoogle(credential).subscribe(this.observador());
   }
@@ -70,7 +68,7 @@ export class LoginComponent implements AfterViewInit {
       },
       error: (err: any) => {
         this.cargando = false;
-        this.error = err.error?.message || 'Error al iniciar sesión';
+        this.notifications.httpError(err, 'Error al iniciar sesión');
       }
     };
   }

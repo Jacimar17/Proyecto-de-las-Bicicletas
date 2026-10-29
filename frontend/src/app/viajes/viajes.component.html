@@ -4,7 +4,7 @@
     <h1>Mis viajes</h1>
     <p>Seguí tu recorrido actual y consultá tus viajes anteriores.</p>
   </header>
-  <p class="error" *ngIf="error" role="alert">{{ error }}</p>
+
   <p *ngIf="cargando">Cargando historial...</p>
 
   <section class="active-trip-card" *ngIf="viajeActivo">

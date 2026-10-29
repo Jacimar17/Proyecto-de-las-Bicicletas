@@ -7,6 +7,7 @@ import { Bicicleta } from '../shared/services/bicicleta.service';
 import { Estacion, EstacionDetalle, EstacionService } from '../shared/services/estacion.service';
 import { UsuarioService } from '../shared/services/usuario.service';
 import { Viaje, ViajeService } from '../shared/services/viaje.service';
+import { NotificationService } from '../shared/notification.service';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -28,8 +29,6 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   iniciandoViaje = false;
   estacionDestinoId = '';
   viajeActivo: Viaje | null = null;
-  error = '';
-  mensaje = '';
   private map!: L.Map;
   private readonly marcadores = L.layerGroup();
 
@@ -37,7 +36,8 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
     private readonly estacionService: EstacionService,
     private readonly viajeService: ViajeService,
     readonly usuarioService: UsuarioService,
-    private readonly changeDetector: ChangeDetectorRef
+    private readonly changeDetector: ChangeDetectorRef,
+    private readonly notifications: NotificationService
   ) {}
 
   get bicicletasDisponibles(): Bicicleta[] {
@@ -114,22 +114,22 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   seleccionarBicicleta(id: string): void {
     this.bicicletaId = id;
     this.limpiarCodigoDesbloqueo();
-    this.error = '';
-    this.mensaje = '';
   }
 
   generarCodigoDesbloqueo(): void {
     if (!this.bicicletaId) return;
-    this.error = '';
-    this.mensaje = '';
     this.limpiarCodigoDesbloqueo();
     this.generandoCodigo = true;
     this.viajeService.generateUnlockCode(this.bicicletaId).subscribe({
       next: resultado => {
         this.codigoGenerado = resultado.codigo;
         this.codigoExpiraEn = resultado.expira_en;
-        this.mensaje = 'Código generado. Solo sirve para tu cuenta y esta bicicleta.';
         this.generandoCodigo = false;
+        this.notifications.success(
+          'Tu código de desbloqueo es:',
+          'Código generado',
+          `${resultado.codigo} — vence ${new Date(resultado.expira_en).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Solo sirve para tu cuenta y esta bicicleta.`
+        );
         this.changeDetector.markForCheck();
       },
       error: error => {
@@ -141,8 +141,6 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
 
   comenzarViaje(): void {
     if (!this.estacionSeleccionada?.id || !this.bicicletaId || !this.codigoDesbloqueo.trim()) return;
-    this.error = '';
-    this.mensaje = '';
     this.iniciandoViaje = true;
     this.viajeService.start(this.bicicletaId, this.estacionSeleccionada.id, this.codigoDesbloqueo.trim()).subscribe({
       next: viaje => {
@@ -150,7 +148,7 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
         this.bicicletaId = '';
         this.limpiarCodigoDesbloqueo();
         this.iniciandoViaje = false;
-        this.mensaje = 'Viaje iniciado. ¡Buen recorrido!';
+        this.notifications.success('Viaje iniciado. ¡Buen recorrido!', 'Viaje iniciado');
         this.actualizarDisponibilidad();
         this.changeDetector.markForCheck();
       },
@@ -163,12 +161,10 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
 
   devolverBicicleta(): void {
     if (!this.estacionDestinoId) return;
-    this.error = '';
-    this.mensaje = '';
     this.viajeService.finish(this.estacionDestinoId).subscribe({
       next: () => {
         this.viajeActivo = null;
-        this.mensaje = 'Bicicleta devuelta correctamente.';
+        this.notifications.success('Bicicleta devuelta correctamente.', 'Viaje finalizado');
         this.actualizarDisponibilidad();
         this.changeDetector.markForCheck();
       },
@@ -211,7 +207,7 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
 
   private agregarMarcador(estacion: Estacion): void {
     const icono = L.divIcon({
-      html: `<div style="background:${estacion.activa ? '#187653' : '#89958e'};width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(23,54,38,.3);"></div>`,
+      html: `<div style="background:${estacion.activa ? '#38b44b' : '#89958e'};width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(23,54,38,.3);"></div>`,
       className: 'station-map-marker',
       iconSize: [24, 24],
       iconAnchor: [12, 12]
@@ -238,9 +234,8 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
     return contenedor;
   }
 
-  private mostrarError(error: { error?: { message?: string } }): void {
-    this.error = error.error?.message ?? 'No se pudo completar la operación';
-    this.mensaje = '';
+  private mostrarError(error: { status?: number; error?: { message?: string } }): void {
+    this.notifications.httpError(error);
     this.changeDetector.markForCheck();
   }
 }

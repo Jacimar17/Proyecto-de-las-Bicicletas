@@ -1,8 +1,8 @@
 :root {
   color-scheme: light;
-  --green: #187653;
-  --green-dark: #10583e;
-  --green-soft: #e8f4ed;
+  --green: #38b44b;
+  --green-dark: #2a8f3a;
+  --green-soft: #e9f7ec;
   --ink: #1d2c25;
   --muted: #718078;
   --line: #e1e9e3;
@@ -32,7 +32,7 @@ body {
   margin: 0;
   background: var(--canvas);
   color: var(--ink);
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-family: Montserrat, "Segoe UI", Arial, sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -53,7 +53,7 @@ select {
 }
 
 :focus-visible {
-  outline: 3px solid rgb(24 118 83 / 36%);
+  outline: 3px solid rgb(56 180 75 / 40%);
   outline-offset: 3px;
 }
 

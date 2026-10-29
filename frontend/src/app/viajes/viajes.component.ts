@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Bicicleta, BicicletaService } from '../shared/services/bicicleta.service';
 import { Estacion, EstacionService } from '../shared/services/estacion.service';
 import { Viaje, ViajeService } from '../shared/services/viaje.service';
+import { NotificationService } from '../shared/notification.service';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -18,13 +19,13 @@ export class ViajesComponent implements OnInit {
   estaciones: Estacion[] = [];
   bicicletas: Bicicleta[] = [];
   cargando = true;
-  error = '';
 
   constructor(
     private readonly viajeService: ViajeService,
     private readonly estacionService: EstacionService,
     private readonly bicicletaService: BicicletaService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly notifications: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -64,8 +65,9 @@ export class ViajesComponent implements OnInit {
     });
   }
 
-  private mostrarError(error: { error?: { message?: string } }): void {
-    this.error = error.error?.message ?? 'No se pudieron cargar los viajes';
-        this.cdr.markForCheck();
-      }
+  private mostrarError(error: { status?: number; error?: { message?: string } }): void {
+    this.cargando = false;
+    this.notifications.httpError(error, 'No se pudieron cargar los viajes');
+    this.cdr.markForCheck();
+  }
 }

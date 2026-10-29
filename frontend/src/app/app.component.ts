@@ -3,11 +3,12 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { UsuarioService } from './shared/services/usuario.service';
 import { Router } from '@angular/router';
+import { NotificationModalComponent } from './shared/notification-modal.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, NotificationModalComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })

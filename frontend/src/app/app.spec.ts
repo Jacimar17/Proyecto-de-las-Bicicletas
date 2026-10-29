@@ -21,7 +21,7 @@ describe('AppComponent', () => {
     const fixture = TestBed.createComponent(AppComponent);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.brand')?.textContent).toContain('BiciCiudad');
+    expect(compiled.querySelector('.brand')?.textContent).toContain('BiciVT');
     expect(compiled.querySelector('.primary-nav a')?.textContent).toContain('Mapa');
   });
 });

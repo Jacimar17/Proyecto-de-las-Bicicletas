@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { UsuarioService } from '../shared/services/usuario.service';
+import { NotificationService } from '../shared/notification.service';
 
 @Component({
   selector: 'app-registro',
@@ -20,13 +21,11 @@ export class RegistroComponent {
   dni = '';
   email = '';
   password = '';
-  error = '';
   cargando = false;
 
-  constructor(private usuarioService: UsuarioService, private router: Router) {}
+  constructor(private usuarioService: UsuarioService, private router: Router, private notifications: NotificationService) {}
 
   registro(): void {
-    this.error = '';
     this.cargando = true;
     this.usuarioService.registro({ nombre: this.nombre, dni: this.dni, email: this.email, password: this.password }).subscribe({
       next: () => {
@@ -44,7 +43,7 @@ export class RegistroComponent {
       },
       error: (err) => {
         this.cargando = false;
-        this.error = err.error?.message || 'Error al registrarse';
+        this.notifications.httpError(err, 'Error al registrarse');
       }
     });
   }
