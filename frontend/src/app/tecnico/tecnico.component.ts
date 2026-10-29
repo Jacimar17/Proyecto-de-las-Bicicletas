@@ -1,10 +1,11 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Bicicleta, BicicletaService } from '../shared/services/bicicleta.service';
 import { Estacion, EstacionService } from '../shared/services/estacion.service';
 import { Mantenimiento, MantenimientoService, TareaRealizada } from '../shared/services/mantenimiento.service';
 import { TareaMantenimiento, TareaMantenimientoService, ZONAS, ZonaBicicleta, etiquetaZona } from '../shared/services/tarea-mantenimiento.service';
+import { PuntoMantenimiento, PuntoMantenimientoService } from '../shared/services/punto-mantenimiento.service';
 import { NotificationService } from '../shared/notification.service';
 
 @Component({
@@ -30,11 +31,23 @@ export class TecnicoComponent implements OnInit {
   tareasElegidas: TareaRealizada[] = [];
   procesando = false;
 
+  puntos: PuntoMantenimiento[] = [];
+  private puntosGuardados = new Map<string, { x: number; y: number }>();
+  modoEdicion = false;
+  agregando = false;
+  zonaNueva: ZonaBicicleta = 'cadena';
+  puntoSeleccionado: string | null = null;
+  arrastrandoId: string | null = null;
+  guardandoPuntos = false;
+  private huboArrastre = false;
+  @ViewChild('imagenBici') private imagenBici?: ElementRef<HTMLElement>;
+
   constructor(
     private readonly bicicletaService: BicicletaService,
     private readonly estacionService: EstacionService,
     private readonly mantenimientoService: MantenimientoService,
     private readonly tareaService: TareaMantenimientoService,
+    private readonly puntoService: PuntoMantenimientoService,
     private readonly cdr: ChangeDetectorRef,
     private readonly notifications: NotificationService
   ) {}
@@ -46,6 +59,7 @@ export class TecnicoComponent implements OnInit {
       next: data => { this.estaciones = data.filter(estacion => estacion.activa); this.cdr.markForCheck(); },
       error: error => this.mostrarError(error)
     });
+    this.cargarPuntos();
     this.tareaService.getAll().subscribe({
       next: data => { this.catalogo = data; this.cdr.markForCheck(); },
       error: error => this.mostrarError(error)
@@ -163,8 +177,141 @@ export class TecnicoComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  private cargarBicicletas(): void {
-    this.bicicletaService.getAll().subscribe({
+  trackPunto(_: number, punto: PuntoMantenimiento): string {
+    return punto.id;
+  }
+
+  get hayCambios(): boolean {
+    return this.puntos.some(punto => this.cambiado(punto));
+  }
+
+  alternarEdicion(): void {
+    if (this.modoEdicion && this.hayCambios && !confirm('Hay posiciones sin guardar. Se descartaran. Continuar?')) return;
+    if (this.modoEdicion) this.descartarCambios();
+    this.modoEdicion = !this.modoEdicion;
+    this.agregando = false;
+    this.puntoSeleccionado = null;
+  }
+
+  descartarCambios(): void {
+    this.puntos = this.puntos.map(punto => ({ ...punto, ...(this.puntosGuardados.get(punto.id) ?? {}) }));
+  }
+
+  guardarPosiciones(): void {
+    const cambios = this.puntos.filter(punto => this.cambiado(punto)).map(({ id, x, y }) => ({ id, x, y }));
+    if (cambios.length === 0) return;
+    this.guardandoPuntos = true;
+    this.puntoService.updatePosiciones(cambios).subscribe({
+      next: () => {
+        cambios.forEach(({ id, x, y }) => this.puntosGuardados.set(id, { x, y }));
+        this.guardandoPuntos = false;
+        this.cdr.markForCheck();
+      },
+      error: error => { this.guardandoPuntos = false; this.mostrarError(error); }
+    });
+  }
+
+  clickPunto(event: Event, punto: PuntoMantenimiento): void {
+    event.stopPropagation();
+    if (this.huboArrastre) { this.huboArrastre = false; return; }
+    if (this.modoEdicion) {
+      this.puntoSeleccionado = punto.id;
+      this.agregando = false;
+    } else {
+      this.seleccionarZona(punto.zona);
+    }
+  }
+
+  clickImagen(event: MouseEvent): void {
+    if (!this.modoEdicion) return;
+    const posicion = this.porcentajes(event);
+    if (!posicion) return;
+    if (this.agregando) {
+      this.puntoService.create({ zona: this.zonaNueva, nombre: etiquetaZona(this.zonaNueva), ...posicion }).subscribe({
+        next: creado => {
+          this.puntos = [...this.puntos, creado];
+          this.puntosGuardados.set(creado.id, { x: creado.x, y: creado.y });
+          this.puntoSeleccionado = creado.id;
+          this.agregando = false;
+          this.cdr.markForCheck();
+        },
+        error: error => this.mostrarError(error)
+      });
+    } else if (this.puntoSeleccionado) {
+      this.moverPunto(this.puntoSeleccionado, posicion);
+    }
+  }
+
+  eliminarPunto(): void {
+    const id = this.puntoSeleccionado;
+    if (!id) return;
+    this.puntoService.delete(id).subscribe({
+      next: () => {
+        this.puntos = this.puntos.filter(punto => punto.id !== id);
+        this.puntosGuardados.delete(id);
+        this.puntoSeleccionado = null;
+        this.cdr.markForCheck();
+      },
+      error: error => this.mostrarError(error)
+    });
+  }
+
+  iniciarArrastre(event: PointerEvent, punto: PuntoMantenimiento): void {
+    if (!this.modoEdicion) return;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    this.arrastrandoId = punto.id;
+    this.huboArrastre = false;
+    this.puntoSeleccionado = punto.id;
+  }
+
+  arrastrar(event: PointerEvent, punto: PuntoMantenimiento): void {
+    if (this.arrastrandoId !== punto.id) return;
+    const posicion = this.porcentajes(event);
+    if (!posicion) return;
+    this.huboArrastre = true;
+    this.moverPunto(punto.id, posicion);
+  }
+
+  terminarArrastre(event: PointerEvent): void {
+    if (this.arrastrandoId === null) return;
+    (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
+    this.arrastrandoId = null;
+    // Si no se dispara click tras soltar, se limpia la marca de arrastre.
+    setTimeout(() => { this.huboArrastre = false; });
+  }
+
+  private cambiado(punto: PuntoMantenimiento): boolean {
+    const original = this.puntosGuardados.get(punto.id);
+    return !original || original.x !== punto.x || original.y !== punto.y;
+  }
+
+  private moverPunto(id: string, posicion: { x: number; y: number }): void {
+    this.puntos = this.puntos.map(punto => punto.id === id ? { ...punto, ...posicion } : punto);
+    this.cdr.markForCheck();
+  }
+
+  private porcentajes(event: MouseEvent | PointerEvent): { x: number; y: number } | null {
+    const rect = this.imagenBici?.nativeElement.getBoundingClientRect();
+    if (!rect || rect.width === 0 || rect.height === 0) return null;
+    const limitar = (valor: number) => Math.min(100, Math.max(0, Math.round(valor * 100) / 100));
+    return {
+      x: limitar(((event.clientX - rect.left) / rect.width) * 100),
+      y: limitar(((event.clientY - rect.top) / rect.height) * 100)
+    };
+  }
+
+  private cargarPuntos(): void {
+    this.puntoService.getAll().subscribe({
+      next: data => {
+        this.puntos = data;
+        this.puntosGuardados = new Map(data.map(punto => [punto.id, { x: punto.x, y: punto.y }]));
+        this.cdr.markForCheck();
+      },
+      error: error => this.mostrarError(error)
+    });
+  }
+
+  private cargarBicicletas(): void {    this.bicicletaService.getAll().subscribe({
       next: data => { this.bicicletas = data; this.cdr.markForCheck(); },
       error: error => this.mostrarError(error)
     });
