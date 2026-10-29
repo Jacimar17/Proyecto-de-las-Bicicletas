@@ -9,6 +9,8 @@
     <button type="button" [class.active]="seccion === 'usuarios'" (click)="cambiarSeccion('usuarios')">Usuarios</button>
     <button type="button" [class.active]="seccion === 'bicicletas'" (click)="cambiarSeccion('bicicletas')">Bicicletas</button>
     <button type="button" [class.active]="seccion === 'estaciones'" (click)="cambiarSeccion('estaciones')">Estaciones</button>
+    <button type="button" [class.active]="seccion === 'viajes'" (click)="cambiarSeccion('viajes')">Viajes</button>
+    <button type="button" [class.active]="seccion === 'mantenimientos'" (click)="cambiarSeccion('mantenimientos')">Mantenimientos</button>
   </nav>
 
   <p class="error" *ngIf="error" role="alert">{{ error }}</p>
@@ -35,15 +37,16 @@
 
     <h2>Usuarios registrados</h2>
     <div class="tabla-wrap">
-      <table><thead><tr><th>DNI</th><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <table><thead><tr><th>DNI</th><th>Nombre</th><th>Email</th>      <th>Rol</th><th>Puntuación</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody><tr *ngFor="let usuario of usuarios">
           <td>{{ usuario.dni }}</td><td>{{ usuario.nombre }}</td><td>{{ usuario.email }}</td><td>{{ usuario.role }}</td>
+                <td>{{ usuario.puntuacion ?? '-' }}</td>
           <td>{{ usuario.bloqueado ? 'Bloqueado' : 'Activo' }}</td>
           <td class="acciones">
             <button type="button" (click)="editarUsuario(usuario)">Modificar</button>
             <button type="button" class="danger" (click)="eliminarUsuario(usuario)">Eliminar</button>
           </td>
-        </tr><tr *ngIf="usuarios.length === 0"><td colspan="6">No hay usuarios registrados.</td></tr></tbody>
+        </tr><tr *ngIf="usuarios.length === 0"><td colspan="7">No hay usuarios registrados.</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -116,6 +119,38 @@
             <button type="button" class="danger" (click)="eliminarEstacion(estacion)">Eliminar</button>
           </td>
         </tr><tr *ngIf="estaciones.length === 0"><td colspan="5">No hay estaciones registradas.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section *ngIf="seccion === 'viajes'">
+    <h2>Todos los viajes</h2>
+    <div class="tabla-wrap">
+      <table><thead><tr><th>Usuario</th><th>Bicicleta</th><th>Origen</th><th>Destino</th><th>Inicio</th><th>Fin</th><th>Estado</th></tr></thead>
+        <tbody><tr *ngFor="let viaje of viajes">
+          <td>{{ nombreUsuario(viaje.usuario_id) }}</td>
+          <td>{{ codigoBicicleta(viaje.bicicleta_id) }}</td>
+          <td>{{ nombreEstacion(viaje.estacion_origen_id) }}</td>
+          <td>{{ nombreEstacion(viaje.estacion_destino_id) }}</td>
+          <td>{{ viaje.fecha_inicio | date: 'short' }}</td>
+          <td>{{ viaje.fecha_fin ? (viaje.fecha_fin | date: 'short') : '-' }}</td>
+          <td>{{ viaje.fecha_fin ? 'Finalizado' : 'En curso' }}</td>
+        </tr><tr *ngIf="viajes.length === 0"><td colspan="7">No hay viajes registrados.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section *ngIf="seccion === 'mantenimientos'">
+    <h2>Historial de mantenimiento</h2>
+    <div class="tabla-wrap">
+      <table><thead><tr><th>Bicicleta</th><th>Estado anterior</th><th>Estado nuevo</th><th>Técnico</th><th>Fecha</th></tr></thead>
+        <tbody><tr *ngFor="let item of mantenimientos">
+          <td>{{ codigoBicicleta(item.bicicleta_id) }}</td>
+          <td>{{ item.estado_anterior }}</td>
+          <td>{{ item.estado_nuevo }}</td>
+          <td>{{ item.tecnico_responsable }}</td>
+          <td>{{ item.fecha_actualizacion | date: 'short' }}</td>
+        </tr><tr *ngIf="mantenimientos.length === 0"><td colspan="5">No hay registros de mantenimiento.</td></tr></tbody>
       </table>
     </div>
   </section>

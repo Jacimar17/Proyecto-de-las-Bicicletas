@@ -24,6 +24,8 @@ export interface Usuario {
   email: string;
   bloqueado: boolean;
   role: RolUsuario;
+  puntuacion?: number;
+  suspendidoHasta?: string | null;
 }
 
 export interface LoginResponse {
@@ -50,6 +52,10 @@ export class UsuarioService {
 
   registro(data: RegistroRequest): Observable<Usuario> {
     return this.http.post<Usuario>(`${this.api}/usuario/registro`, data);
+  }
+
+  getPerfil(): Observable<Usuario> {
+    return this.http.get<Usuario>(`${this.api}/usuario/perfil`);
   }
 
   getAll(): Observable<Usuario[]> {

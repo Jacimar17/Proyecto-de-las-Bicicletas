@@ -27,6 +27,14 @@ export class ViajeController {
         }
     };
 
+    getAll = async (_req: Request, res: Response): Promise<void> => {
+        try {
+            res.status(200).json(await this.service.getAll());
+        } catch (error) {
+            res.status(errorStatus(error)).json({ message: errorMessage(error) });
+        }
+    };
+
     getLegacyHistory = async (_req: Request, res: Response): Promise<void> => {
         try {
             const user = currentUser(res);

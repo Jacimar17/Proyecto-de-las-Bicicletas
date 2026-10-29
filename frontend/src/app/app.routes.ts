@@ -30,5 +30,10 @@ export const routes: Routes = [
     canActivate: [roleGuard(['cliente'])],
     loadComponent: () => import('./viajes/viajes.component').then(m => m.ViajesComponent)
   },
+  {
+    path: 'perfil',
+    canActivate: [roleGuard(['cliente', 'admin', 'tecnico'])],
+    loadComponent: () => import('./perfil/perfil.component').then(m => m.PerfilComponent)
+  },
   { path: '**', redirectTo: 'mapa' }
 ];

@@ -1,0 +1,13 @@
+<main class="perfil-container" *ngIf="usuario">
+  <p class="eyebrow">MI CUENTA</p>
+  <h1>Mi perfil</h1>
+  <dl class="perfil-card">
+    <div><dt>Nombre</dt><dd>{{ usuario.nombre }}</dd></div>
+    <div><dt>DNI</dt><dd>{{ usuario.dni }}</dd></div>
+    <div><dt>Email</dt><dd>{{ usuario.email }}</dd></div>
+    <div><dt>Rol</dt><dd>{{ usuario.role }}</dd></div>
+    <div><dt>Puntuación</dt><dd>{{ usuario.puntuacion ?? '—' }}</dd></div>
+    <div><dt>Estado</dt><dd>{{ estado }}</dd></div>
+    <div *ngIf="suspendido"><dt>Suspendido hasta</dt><dd>{{ usuario.suspendidoHasta | date: 'medium' }}</dd></div>
+  </dl>
+</main>

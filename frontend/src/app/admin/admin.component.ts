@@ -5,8 +5,10 @@ import * as L from 'leaflet';
 import { Bicicleta, BicicletaService } from '../shared/services/bicicleta.service';
 import { Estacion, EstacionService } from '../shared/services/estacion.service';
 import { RolUsuario, Usuario, UsuarioService } from '../shared/services/usuario.service';
+import { Viaje, ViajeService } from '../shared/services/viaje.service';
+import { Mantenimiento, MantenimientoService } from '../shared/services/mantenimiento.service';
 
-type SeccionAdmin = 'usuarios' | 'bicicletas' | 'estaciones';
+type SeccionAdmin = 'usuarios' | 'bicicletas' | 'estaciones' | 'viajes' | 'mantenimientos';
 
 @Component({
   selector: 'app-admin',
@@ -20,6 +22,8 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   usuarios: Usuario[] = [];
   bicicletas: Bicicleta[] = [];
   estaciones: Estacion[] = [];
+  viajes: Viaje[] = [];
+  mantenimientos: Mantenimiento[] = [];
   seleccionado: string | null = null;
   error = '';
   mensaje = '';
@@ -48,6 +52,8 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
     private readonly bicicletaService: BicicletaService,
     private readonly estacionService: EstacionService,
     private readonly usuarioService: UsuarioService,
+    private readonly viajeService: ViajeService,
+    private readonly mantenimientoService: MantenimientoService,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
@@ -69,12 +75,41 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.cargarEstaciones();
   }
 
+  nombreUsuario(id: string): string {
+    return this.usuarios.find(usuario => usuario.id === id)?.nombre ?? id;
+  }
+
+  codigoBicicleta(id: string): string {
+    return this.bicicletas.find(bicicleta => bicicleta.id === id)?.codigo ?? id;
+  }
+
+  nombreEstacion(id: string | null): string {
+    if (!id) return 'Pendiente';
+    return this.estaciones.find(estacion => estacion.id === id)?.nombre ?? id;
+  }
+
   cambiarSeccion(seccion: SeccionAdmin): void {
     if (this.seccion === 'estaciones' && seccion !== 'estaciones') {
       this.destruirMapaEstacion();
     }
     this.limpiarFormulario();
     this.seccion = seccion;
+    if (seccion === 'viajes') this.cargarViajes();
+    if (seccion === 'mantenimientos') this.cargarMantenimientos();
+  }
+
+  private cargarViajes(): void {
+    this.viajeService.getAll().subscribe({
+      next: data => { this.viajes = data; this.cdr.markForCheck(); },
+      error: error => this.mostrarError(error)
+    });
+  }
+
+  private cargarMantenimientos(): void {
+    this.mantenimientoService.getAll().subscribe({
+      next: data => { this.mantenimientos = data; this.cdr.markForCheck(); },
+      error: error => this.mostrarError(error)
+    });
   }
 
   guardar(): void {
@@ -82,7 +117,7 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.mensaje = '';
     if (this.seccion === 'usuarios') this.guardarUsuario();
     else if (this.seccion === 'bicicletas') this.guardarBicicleta();
-    else this.guardarEstacion();
+    else if (this.seccion === 'estaciones') this.guardarEstacion();
   }
 
   editarUsuario(usuario: Usuario): void {

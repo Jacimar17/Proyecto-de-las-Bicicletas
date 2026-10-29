@@ -79,6 +79,7 @@ function makeTripRepository(): ViajeRepository {
         findActiveByUser: async userId =>
             trips.find(trip => trip.usuario_id === userId && trip.fecha_fin === null) ?? null,
         findById: async id => trips.find(trip => trip.id === id) ?? null,
+        findAll: async () => [...trips],
         findHistoryByUser: async userId => trips.filter(trip => trip.usuario_id === userId),
         finish: async (id, userId, destinationId, date) => {
             const trip = trips.find(item => item.id === id && item.usuario_id === userId && item.fecha_fin === null);

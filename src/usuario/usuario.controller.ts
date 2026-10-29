@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { errorMessage, errorStatus } from '../common/api-error';
+import { currentUser } from './auth.middleware';
 import { UsuarioService } from './usuario.service';
 
 export class UsuarioController {
@@ -17,6 +18,14 @@ export class UsuarioController {
         try {
             const result = await this.service.login(req.body?.dni, req.body?.password);
             res.status(200).json({ ...result.user, token: result.token, role: result.role });
+        } catch (error) {
+            res.status(errorStatus(error)).json({ message: errorMessage(error) });
+        }
+    };
+
+    profile = async (_req: Request, res: Response): Promise<void> => {
+        try {
+            res.status(200).json(await this.service.getById(currentUser(res).id));
         } catch (error) {
             res.status(errorStatus(error)).json({ message: errorMessage(error) });
         }

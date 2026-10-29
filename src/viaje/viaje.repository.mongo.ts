@@ -46,6 +46,11 @@ export class ViajeRepositoryMongo implements ViajeRepository {
         return doc ? this.toEntity(doc) : null;
     }
 
+    async findAll(): Promise<Viaje[]> {
+        const docs = await this.collection.find({}).sort({ fecha_inicio: -1 }).toArray();
+        return docs.map(doc => this.toEntity(doc));
+    }
+
     async findHistoryByUser(usuarioId: string): Promise<Viaje[]> {
         const docs = await this.collection.find({ usuario_id: usuarioId })
             .sort({ fecha_inicio: -1 })

@@ -32,6 +32,10 @@ export class ViajeService {
         return this.repository.findHistoryByUser(usuarioId);
     }
 
+    async getAll(): Promise<Viaje[]> {
+        return this.repository.findAll();
+    }
+
     async getActive(usuarioId: string): Promise<Viaje | null> {
         return this.repository.findActiveByUser(usuarioId);
     }

@@ -10,6 +10,7 @@
 
     <nav class="primary-nav" aria-label="Navegación principal">
       <a routerLink="/mapa" routerLinkActive="active" ariaCurrentWhenActive="page">Mapa</a>
+      <a routerLink="/perfil" routerLinkActive="active" ariaCurrentWhenActive="page" *ngIf="usuarioService.usuarioActual">Perfil</a>
       <a *ngIf="usuarioService.usuarioActual?.role === 'cliente'" routerLink="/viajes" routerLinkActive="active" ariaCurrentWhenActive="page">Mis viajes</a>
       <a *ngIf="usuarioService.usuarioActual?.role === 'admin'" routerLink="/admin" routerLinkActive="active" ariaCurrentWhenActive="page">Administración</a>
       <a *ngIf="usuarioService.usuarioActual?.role === 'tecnico'" routerLink="/tecnico" routerLinkActive="active" ariaCurrentWhenActive="page">Mantenimiento</a>

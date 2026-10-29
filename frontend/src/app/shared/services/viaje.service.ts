@@ -22,6 +22,10 @@ export class ViajeService {
     return this.http.get<Viaje[]>(this.api);
   }
 
+  getAll(): Observable<Viaje[]> {
+    return this.http.get<Viaje[]>(`${this.api}/todos`);
+  }
+
   getActive(): Observable<Viaje | null> {
     return this.http.get<Viaje | null>(`${this.api}/activo`);
   }
