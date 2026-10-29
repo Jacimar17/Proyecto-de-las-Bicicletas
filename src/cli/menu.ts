@@ -3,6 +3,7 @@ import { ask, closePrompt } from "./terminal";
 import type {
   ApiData,
   Bicycle,
+  PerfilUsuario,
   SessionUser,
   Station,
   Trip,
@@ -674,28 +675,23 @@ async function viewProfile() {
     console.log("No hay sesión activa.\n");
     return;
   }
-  // Buscar el perfil por email a través del listado (protegido por token)
-  const { status, data } = await apiFetch("/api/users");
+  const { status, data } = await apiFetch("/api/usuario/perfil");
   if (status !== 200) {
     print(data);
     return;
   }
-  const me = (data.users || []).find((u) => u.email === user.email);
-  if (me) {
-    console.log("\n----- MI PERFIL -----");
-    console.log(`Nombre: ${me.name} ${me.lastName}`);
-    console.log(`Email: ${me.email}`);
-    console.log(`Rol: ${me.role || "cliente"}`);
-    console.log(`Puntuación: ${me.puntuacion ?? 10}/10`);
-    if (me.bloqueado) {
-      console.log("Estado: Cuenta bloqueada");
-    } else if (me.suspendidoHasta && new Date(me.suspendidoHasta).getTime() > Date.now()) {
-      console.log(`Estado: Suspendida hasta ${new Date(me.suspendidoHasta).toLocaleString()}`);
-    }
-    console.log("");
-  } else {
-    console.log("\nNo se encontró tu perfil.\n");
+  const me = data as unknown as PerfilUsuario;
+  console.log("\n----- MI PERFIL -----");
+  console.log(`Nombre: ${me.nombre}`);
+  console.log(`Email: ${me.email}`);
+  console.log(`Rol: ${me.role || "cliente"}`);
+  console.log(`Puntuación: ${me.puntuacion ?? 10}/10`);
+  if (me.bloqueado) {
+    console.log("Estado: Cuenta bloqueada");
+  } else if (me.suspendidoHasta && new Date(me.suspendidoHasta).getTime() > Date.now()) {
+    console.log(`Estado: Suspendida hasta ${new Date(me.suspendidoHasta).toLocaleString()}`);
   }
+  console.log("");
 }
 
 // ---------- MENÚ PRINCIPAL ----------

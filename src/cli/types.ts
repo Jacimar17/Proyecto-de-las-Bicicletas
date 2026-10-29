@@ -18,6 +18,17 @@ export interface User {
   bloqueado?: boolean;
 }
 
+export interface PerfilUsuario {
+  id?: string;
+  dni?: string;
+  nombre: string;
+  email: string;
+  role?: string;
+  puntuacion?: number;
+  suspendidoHasta?: string | null;
+  bloqueado?: boolean;
+}
+
 export interface SessionUser extends User {
   token: string;
   role: string;
