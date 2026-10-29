@@ -8,6 +8,7 @@
     "dev": "nodemon --exec \"node -r ts-node/register\" server.ts",
     "menu": "node -r ts-node/register src/cli/index.ts",
     "seed": "node -r ts-node/register src/seed.ts",
+    "migrate:bicis-admin": "node -r ts-node/register src/migrations/rename-bicis-and-admin.ts",
     "build": "tsc --noEmit"
   },
   "keywords": [],

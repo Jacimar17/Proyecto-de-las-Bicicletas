@@ -21,7 +21,7 @@
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>DNI</mat-label>
-        <input matInput [(ngModel)]="dni" placeholder="40123456" />
+        <input matInput [(ngModel)]="dni" inputmode="numeric" autocomplete="off" />
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full-width">
@@ -40,6 +40,13 @@
       <button mat-raised-button color="primary" (click)="registro()" [disabled]="cargando" class="full-width">
         {{ cargando ? 'Registrando...' : 'Registrarse' }}
       </button>
+      <div class="google" *ngIf="googleHabilitado">
+        <p class="centro">o</p>
+        <div class="google-btn">
+          <span class="google-label" aria-hidden="true"><b>G</b> Crear cuenta con Google</span>
+          <div #googleButton class="google-overlay"></div>
+        </div>
+      </div>
     </mat-card-actions>
     <mat-card-footer>
       <p class="centro">¿Ya tenés cuenta? <a routerLink="/login">Iniciá sesión</a></p>

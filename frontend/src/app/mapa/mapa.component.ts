@@ -222,13 +222,13 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   private crearPopup(estacion: Estacion): HTMLElement {
     const contenedor = document.createElement('div');
     const titulo = document.createElement('strong');
-    titulo.textContent = estacion.nombre;
+    titulo.textContent = `🚲 ${estacion.nombre}`;
     const direccion = document.createElement('div');
     direccion.textContent = estacion.direccion;
     const disponibilidad = document.createElement('div');
     disponibilidad.style.marginTop = '6px';
     disponibilidad.textContent = estacion.activa
-      ? `Disponibles: ${estacion.disponibles} de ${estacion.capacidad} bicicletas`
+      ? `Disponibles: ${Math.min(estacion.disponibles, estacion.capacidad)} de ${estacion.capacidad} bicicletas`
       : 'Estación no habilitada';
     contenedor.append(titulo, direccion, disponibilidad);
     return contenedor;

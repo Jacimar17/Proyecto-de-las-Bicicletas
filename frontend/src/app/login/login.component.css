@@ -5,4 +5,16 @@
 
 .google {
   margin-top: 16px;
+  width: 100%;
+}
+
+.google .centro {
+  text-align: center;
+  margin: 0 0 12px;
+}
+
+.google-btn {
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }

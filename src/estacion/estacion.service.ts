@@ -14,6 +14,13 @@ export interface EstacionDetalle extends Estacion {
 
 export class EstacionNoEncontradaError extends Error {}
 
+const ESTADOS_OPERATIVOS = ['DISPONIBLE', 'APTA'];
+
+function contarDisponibles(bicicletas: Array<{ estado: string }>, capacidad: number): number {
+    const disponibles = bicicletas.filter(bicicleta => ESTADOS_OPERATIVOS.includes(bicicleta.estado)).length;
+    return Math.min(disponibles, capacidad);
+}
+
 export class EstacionService {
     constructor(
         private readonly estacionRepository: EstacionRepository,
@@ -28,7 +35,7 @@ export class EstacionService {
             return {
                 ...estacion,
                 total_bicicletas: bicicletas.length,
-                disponibles: bicicletas.filter(bicicleta => bicicleta.estado === 'DISPONIBLE').length
+                disponibles: contarDisponibles(bicicletas, estacion.capacidad)
             };
         }));
     }
@@ -38,7 +45,7 @@ export class EstacionService {
         if (!estacion) throw new EstacionNoEncontradaError('Estación no encontrada');
         const bicicletas = (await this.bicicletaRepository.findByEstacion(id))
             .map(({ unlockCode: _unlockCode, ...publica }) => publica);
-        const disponibles = bicicletas.filter(bicicleta => bicicleta.estado === 'DISPONIBLE').length;
+        const disponibles = contarDisponibles(bicicletas, estacion.capacidad);
         return { ...estacion, bicicletas, disponibles };
     }
 

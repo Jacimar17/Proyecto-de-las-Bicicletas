@@ -41,7 +41,8 @@ export class LoginComponent implements AfterViewInit {
         callback: (r: { credential: string }) => this.zone.run(() => this.loginGoogle(r.credential))
       });
       google.accounts.id.renderButton(this.googleButton.nativeElement, {
-        theme: 'outline', size: 'large', text: 'signin_with', width: 280
+        theme: 'outline', size: 'large', text: 'signin_with',
+        width: Math.min(400, this.googleButton.nativeElement.clientWidth || 280)
       });
     };
     iniciar();
