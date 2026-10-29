@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { API_BASE_URL } from '../api-config';
 
 export interface Viaje {
   id?: string;
@@ -19,7 +20,7 @@ export interface CodigoDesbloqueo {
 
 @Injectable({ providedIn: 'root' })
 export class ViajeService {
-  private readonly api = 'http://localhost:3000/api/viajes';
+  private readonly api = `${API_BASE_URL}/viajes`;
 
   constructor(private http: HttpClient) {}
 

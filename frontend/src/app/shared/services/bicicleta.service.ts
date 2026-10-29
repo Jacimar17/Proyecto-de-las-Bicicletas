@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { API_BASE_URL } from '../api-config';
 
 export interface Bicicleta {
   id?: string;
@@ -16,7 +17,7 @@ export interface Bicicleta {
 @Injectable({ providedIn: 'root' })
 export class BicicletaService {
 
-  private readonly api = 'http://localhost:3000/api';
+  private readonly api = API_BASE_URL;
 
   constructor(private http: HttpClient) {}
 

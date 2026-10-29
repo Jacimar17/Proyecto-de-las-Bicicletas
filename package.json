@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "server.ts",
   "scripts": {
-    "test": "node -r ts-node/register --test tests/*.test.ts test/*.test.ts",
+    "test": "node -r ts-node/register --test tests/api.test.ts tests/trips-stations.test.ts tests/db-config.test.ts tests/google-login.test.ts tests/menu.test.ts",
     "start": "node -r ts-node/register server.ts",
     "start:backend": "nodemon --exec \"node -r ts-node/register\" server.ts",
     "start:frontend": "npm --prefix frontend start",

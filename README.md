@@ -57,20 +57,17 @@ Proyecto-de-las-Bicicletas/
 │   ├── angular.json
 │   └── package.json
 ├── src/                              # Código fuente del Backend (Express + TypeScript)
-│   ├── auth/                         # Middlewares y utilidades de autenticación en inglés
-│   ├── bicycles/                     # Dominio de bicicletas (rutas ES y EN, controlador, servicio)
+│   ├── auth/                         # Middleware JWT y control de roles
+│   ├── bicycles/                     # Dominio de bicicletas (controlador, servicio, repositorio, rutas)
 │   ├── cli/                          # Menú interactivo por terminal (CLI)
 │   ├── common/                       # Manejo centralizado de errores (ApiError)
 │   ├── config/                       # Conexión a MongoDB (local/Atlas) y colecciones
-│   ├── estacion/                     # Dominio de estaciones (controlador, repositorio, servicio)
-│   ├── maintenance/                  # Rutas de mantenimiento en inglés (legacy)
-│   ├── mantenimiento/                # Dominio de mantenimientos y catálogo de tareas por zona
+│   ├── maintenance/                  # Dominio de mantenimientos y catálogo de tareas por zona
 │   ├── migrations/                   # Scripts de migración de base de datos
+│   ├── stations/                     # Dominio de estaciones
 │   ├── sync/                         # Servicio y rutas de sincronización con Atlas
-│   ├── trips/                        # Modelo y rutas de viajes en inglés
-│   ├── users/                        # Dominio de usuarios en inglés y Google Login
-│   ├── usuario/                      # Dominio de usuarios en español y autenticación JWT
-│   ├── viaje/                        # Dominio de viajes, códigos temporales de desbloqueo
+│   ├── trips/                        # Dominio de viajes y códigos temporales de desbloqueo
+│   ├── users/                        # Dominio de usuarios, JWT y Google Login
 │   ├── app.ts                        # Configuración de Express, middlewares y rutas
 │   └── seed.ts                       # Carga de datos iniciales en la base de datos
 ├── tests/                            # Pruebas automatizadas (Node.js test runner)
@@ -336,8 +333,6 @@ Authorization: Bearer <token_jwt>
 | `PATCH` | `/api/viajes/activo/finalizar` | Cliente | Finaliza el viaje activo indicando la `estacion_destino_id` y actualiza puntuación. |
 | `GET` | `/api/viajes` | Cliente | Consulta el historial completo de viajes del usuario autenticado. |
 | `GET` | `/api/viajes/todos` | Administrador | Monitoreo global de todos los viajes realizados en la plataforma. |
-| `GET` | `/api/viajes/mis-viajes` | Cliente | Endpoint de compatibilidad para el menú de consola (CLI). |
-| `PATCH` | `/api/viajes/:id/devolver` | Cliente | Finalización de viaje por ID (compatibilidad CLI). |
 
 ### Mantenimiento y Taller
 
@@ -349,15 +344,25 @@ Authorization: Bearer <token_jwt>
 | `POST` | `/api/tareas-mantenimiento` | Administrador | Da de alta una nueva tarea para una zona específica de la bicicleta. |
 | `DELETE` | `/api/tareas-mantenimiento/:id` | Administrador | Da de baja una tarea del catálogo. |
 
-### Sincronización y Rutas Legacy
+### Sincronización
 
 | Método | Endpoint | Acceso | Descripción |
 | --- | --- | --- | --- |
 | `GET` | `/api/sync/status` | Público | Consulta el estado del servicio de sincronización local/Atlas y última réplica. |
 | `POST` | `/api/sync` | Público | Dispara manualmente la sincronización bidireccional de datos con Atlas. |
-| `GET/POST/PUT/DELETE` | `/api/bicycles/*` | Admin / Técnico | Rutas en inglés heredadas para compatibilidad con scripts existentes. |
-| `PATCH` | `/api/maintenance/:id/suitable` | Admin / Técnico | Marca bicicleta como apta/disponible (ruta legacy en inglés). |
-| `PATCH` | `/api/maintenance/:id/not-suitable` | Admin / Técnico | Marca bicicleta como en mantenimiento (ruta legacy en inglés). |
+
+### Rutas en español e inglés
+
+Cada dominio tiene una única implementación en inglés (`src/<dominio>/`) montada bajo ambos prefijos, por lo que las rutas de las tablas anteriores también responden con su nombre en inglés. Los textos, mensajes y datos siguen en español.
+
+| Dominio | Prefijos |
+| --- | --- |
+| Usuarios | `/api/users`, `/api/usuarios`, `/api/usuario` (`/register` ≡ `/registro`, `/profile` ≡ `/perfil`) |
+| Bicicletas | `/api/bicycles`, `/api/bicicletas`, `/api/bicicleta` |
+| Estaciones | `/api/stations`, `/api/estaciones`, `/api/estacion` |
+| Viajes | `/api/trips`, `/api/viajes` (`/all` ≡ `/todos`, `/active` ≡ `/activo`, `/unlock-code` ≡ `/codigo-desbloqueo`, `/active/finish` ≡ `/activo/finalizar`) |
+| Mantenimiento | `/api/maintenance`, `/api/mantenimientos`, `/api/mantenimiento` |
+| Tareas de mantenimiento | `/api/maintenance-tasks`, `/api/tareas-mantenimiento` |
 
 ---
 

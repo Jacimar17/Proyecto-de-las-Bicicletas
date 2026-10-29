@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { API_BASE_URL } from '../api-config';
 
 export type RolUsuario = 'cliente' | 'admin' | 'tecnico';
 
@@ -36,13 +37,12 @@ export interface LoginResponse {
 
 @Injectable({ providedIn: 'root' })
 export class UsuarioService {
-  private readonly api = 'http://localhost:3000/api';
+  private readonly api = API_BASE_URL;
 
   constructor(private http: HttpClient) {}
 
   login(data: LoginRequest): Observable<LoginResponse> {
-    return this.http.post<Usuario & { token: string; role: RolUsuario }>(`${this.api}/usuario/login`, data)
-      .pipe(map(response => ({ user: response, token: response.token, role: response.role })));
+    return this.http.post<LoginResponse>(`${this.api}/usuario/login`, data);
   }
 
   loginGoogle(credential: string): Observable<LoginResponse> {

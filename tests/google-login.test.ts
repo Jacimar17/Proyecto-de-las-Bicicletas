@@ -26,6 +26,7 @@ function makeRepository(initial: User[] = []): UserRepository & { items: User[] 
       return user ? Object.assign(user, data) : null;
     },
     delete: async () => false,
+    ensureIndexes: async () => undefined,
   };
 }
 
@@ -49,7 +50,7 @@ test("login con Google crea un usuario cliente nuevo", async () => {
 
 test("login con Google vincula una cuenta existente por email", async () => {
   const repo = makeRepository([
-    { id: "u0", name: "Ana", lastName: "", email: "ana@example.com", password: "x", role: "admin", puntuacion: 10 },
+    { id: "u0", nombre: "Ana", apellido: "", email: "ana@example.com", password: "x", role: "admin", puntuacion: 10, bloqueado: false, suspendidoHasta: null },
   ]);
   const service = new UserService(repo, async () => profile);
   const result = await service.loginGoogle({ credential: "token" });
@@ -70,7 +71,7 @@ test("login con Google rechaza credenciales inválidas, sin email verificado o b
 
   const blocked = new UserService(
     makeRepository([
-      { id: "u0", name: "Ana", lastName: "", email: "ana@example.com", googleId: "g-1", role: "cliente", puntuacion: 10, bloqueado: true },
+      { id: "u0", nombre: "Ana", apellido: "", email: "ana@example.com", googleId: "g-1", role: "cliente", puntuacion: 10, bloqueado: true, suspendidoHasta: null },
     ]),
     async () => profile
   );

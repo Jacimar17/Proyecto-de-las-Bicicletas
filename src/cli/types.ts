@@ -1,43 +1,46 @@
 export interface Bicycle {
-  _id?: string;
-  code: string;
-  currentStation: string;
-  status: string;
-  unlockCode: string;
-  rentedBy?: string | null;
+  id: string;
+  codigo: string;
+  modelo: string;
+  ubicacion: string;
+  estado: string;
+  estacion_id: string | null;
 }
 
 export interface User {
-  _id?: string;
-  name: string;
-  lastName?: string;
+  id: string;
+  nombre: string;
+  apellido?: string;
   email: string;
+  dni?: string;
   role?: string;
   puntuacion?: number;
   suspendidoHasta?: string | null;
   bloqueado?: boolean;
 }
 
-export interface SessionUser extends User {
+export interface SessionUser {
   token: string;
   role: string;
+  nombre: string;
+  email: string;
 }
 
 export interface ApiData {
-  ok?: boolean;
-  mensaje?: string;
   message?: string;
   error?: string;
   codigo?: string;
   expira_en?: string;
   token?: string;
+  role?: string;
   user?: User;
-  users?: User[];
-  total?: number;
-  data?: unknown;
+  nombre?: string;
+  email?: string;
   puntuacion?: number;
   suspendidoHasta?: string | null;
   bloqueado?: boolean;
+  fecha_fin?: string | null;
+  fecha_inicio?: string;
 }
 
 export interface Station {
@@ -47,25 +50,17 @@ export interface Station {
   direccion: string;
   activa: boolean;
   disponibles?: number;
-  bicicletas?: StationBicycle[];
-}
-
-export interface StationBicycle {
-  id: string;
-  codigo: string;
-  modelo: string;
-  estado: string;
-  estacion_id: string | null;
+  bicicletas?: Bicycle[];
 }
 
 export interface Trip {
   id: string;
-  usuarioId: string;
-  bicicletaId: string;
-  estacionOrigenId: string;
-  estacionDestinoId: string | null;
-  fechaInicio: string;
-  fechaFin: string | null;
+  usuario_id: string;
+  bicicleta_id: string;
+  estacion_origen_id: string;
+  estacion_destino_id: string | null;
+  fecha_inicio: string;
+  fecha_fin: string | null;
 }
 
 export interface ApiResult {

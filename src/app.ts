@@ -1,34 +1,30 @@
 import cors from 'cors';
 import express, { Express } from 'express';
 import { Db } from 'mongodb';
-import { createBicycleRoutes } from './bicycles/bicycle.routes';
-import { BicicletaController } from './bicycles/bicicleta.controller';
-import { BicicletaRepositoryMongo } from './bicycles/bicicleta.repository.mongo';
-import { BicicletaRoutes } from './bicycles/bicicleta.routes';
-import { BicicletaService } from './bicycles/bicicleta.service';
-import { EstacionController } from './estacion/estacion.controller';
-import { EstacionRepositoryMongo } from './estacion/estacion.repository.mongo';
-import { EstacionRoutes } from './estacion/estacion.routes';
-import { EstacionService } from './estacion/estacion.service';
-import { createMaintenanceRoutes } from './maintenance/maintenance.routes';
-import { MantenimientoController } from './mantenimiento/mantenimiento.controller';
-import { MantenimientoRepositoryMongo } from './mantenimiento/mantenimiento.repository.mongo';
-import { MantenimientoRoutes } from './mantenimiento/mantenimiento.routes';
-import { MantenimientoService } from './mantenimiento/mantenimiento.service';
-import { crearTareasMantenimientoRoutes } from './mantenimiento/tarea-mantenimiento.routes';
-import { UsuarioController } from './usuario/usuario.controller';
-import { UsuarioRepositoryMongo } from './usuario/usuario.repository.mongo';
-import { UsuarioRoutes } from './usuario/usuario.routes';
-import { UsuarioService } from './usuario/usuario.service';
-import { ViajeController } from './viaje/viaje.controller';
-import { CodigoDesbloqueoRepositoryMongo } from './viaje/codigo-desbloqueo.repository.mongo';
-import { ViajeRepositoryMongo } from './viaje/viaje.repository.mongo';
-import { ViajeRoutes } from './viaje/viaje.routes';
-import { ViajeService } from './viaje/viaje.service';
-import { UserRepositoryMongo } from './users/user.repository.mongo';
-import { createUserRoutes } from './users/user.routes';
+import { BicycleController } from './bicycles/bicycle.controller';
+import { BicycleRepositoryMongo } from './bicycles/bicycle.repository.mongo';
+import { BicycleRoutes } from './bicycles/bicycle.routes';
+import { BicycleService } from './bicycles/bicycle.service';
+import { MaintenanceController } from './maintenance/maintenance.controller';
+import { MaintenanceRepositoryMongo } from './maintenance/maintenance.repository.mongo';
+import { MaintenanceRoutes } from './maintenance/maintenance.routes';
+import { MaintenanceService } from './maintenance/maintenance.service';
+import { createMaintenanceTaskRoutes } from './maintenance/maintenance-task.routes';
+import { StationController } from './stations/station.controller';
+import { StationRepositoryMongo } from './stations/station.repository.mongo';
+import { StationRoutes } from './stations/station.routes';
+import { StationService } from './stations/station.service';
 import { createSyncRoutes } from './sync/sync.routes';
 import { SyncService } from './sync/sync.service';
+import { TripController } from './trips/trip.controller';
+import { TripRepositoryMongo } from './trips/trip.repository.mongo';
+import { TripRoutes } from './trips/trip.routes';
+import { TripService } from './trips/trip.service';
+import { UnlockCodeRepositoryMongo } from './trips/unlock-code.repository.mongo';
+import { UserController } from './users/user.controller';
+import { UserRepositoryMongo } from './users/user.repository.mongo';
+import { UserRoutes } from './users/user.routes';
+import { UserService } from './users/user.service';
 
 export function createApp(db: Db, sync?: SyncService): Express {
   const app = express();
@@ -36,67 +32,56 @@ export function createApp(db: Db, sync?: SyncService): Express {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  const bicicletaRepository = new BicicletaRepositoryMongo(db);
-  const estacionRepository = new EstacionRepositoryMongo(db);
-  const bicicletaService = new BicicletaService(bicicletaRepository, estacionRepository);
-  const bicicletaController = new BicicletaController(bicicletaService);
-  const bicicletaRoutes = new BicicletaRoutes(bicicletaController);
-
-  const estacionService = new EstacionService(estacionRepository, bicicletaRepository);
-  const estacionController = new EstacionController(estacionService);
-  const estacionRoutes = new EstacionRoutes(estacionController);
-
-  const usuarioRepository = new UsuarioRepositoryMongo(db);
-  const usuarioService = new UsuarioService(usuarioRepository);
-  const usuarioController = new UsuarioController(usuarioService);
-  const usuarioRoutes = new UsuarioRoutes(usuarioController);
-
-  const viajeRepository = new ViajeRepositoryMongo(db);
-  const codigoDesbloqueoRepository = new CodigoDesbloqueoRepositoryMongo(db);
+  const bicycleRepository = new BicycleRepositoryMongo(db);
+  const stationRepository = new StationRepositoryMongo(db);
   const userRepository = new UserRepositoryMongo(db);
-  const viajeService = new ViajeService(
-    viajeRepository,
-    bicicletaRepository,
-    estacionRepository,
-    usuarioRepository,
-    userRepository,
-    codigoDesbloqueoRepository
-  );
-  const viajeController = new ViajeController(viajeService);
-  const viajeRoutes = new ViajeRoutes(viajeController);
 
-  const mantenimientoRepository = new MantenimientoRepositoryMongo(db);
-  const mantenimientoService = new MantenimientoService(mantenimientoRepository, bicicletaRepository);
-  const mantenimientoController = new MantenimientoController(mantenimientoService);
-  const mantenimientoRoutes = new MantenimientoRoutes(mantenimientoController);
+  const bicycleRoutes = new BicycleRoutes(
+    new BicycleController(new BicycleService(bicycleRepository, stationRepository))
+  );
+  const stationRoutes = new StationRoutes(
+    new StationController(new StationService(stationRepository, bicycleRepository))
+  );
+  const userRoutes = new UserRoutes(new UserController(new UserService(userRepository)));
+  const tripRoutes = new TripRoutes(
+    new TripController(
+      new TripService(
+        new TripRepositoryMongo(db),
+        bicycleRepository,
+        stationRepository,
+        userRepository,
+        new UnlockCodeRepositoryMongo(db)
+      )
+    )
+  );
+  const maintenanceRoutes = new MaintenanceRoutes(
+    new MaintenanceController(
+      new MaintenanceService(new MaintenanceRepositoryMongo(db), bicycleRepository)
+    )
+  );
 
   app.get('/', (_req, res) => {
     res.json({
-      message: 'Bike rental API is running',
+      message: 'API del Sistema de bicicletas compartidas de Venado Tuerto',
       version: '1.0.0',
       endpoints: {
-        bicycles: '/api/bicycles',
-        bicicletas: '/api/bicicletas',
-        stations: '/api/estaciones',
-        users: '/api/users',
-        usuarios: '/api/usuario',
-        maintenance: '/api/maintenance',
-        mantenimientos: '/api/mantenimientos',
-        trips: '/api/viajes'
+        bicycles: '/api/bicycles (/api/bicicletas)',
+        stations: '/api/stations (/api/estaciones)',
+        users: '/api/users (/api/usuarios)',
+        maintenance: '/api/maintenance (/api/mantenimientos)',
+        maintenanceTasks: '/api/maintenance-tasks (/api/tareas-mantenimiento)',
+        trips: '/api/trips (/api/viajes)'
       }
     });
   });
 
-  app.use('/api', bicicletaRoutes.router);
-  app.use('/api', usuarioRoutes.router);
-  app.use('/api', estacionRoutes.router);
-  app.use('/api', viajeRoutes.router);
-  app.use('/api', mantenimientoRoutes.router);
-  app.use('/api', crearTareasMantenimientoRoutes(db));
-
-  app.use('/api', createBicycleRoutes(db));
-  app.use('/api/maintenance', createMaintenanceRoutes(db));
-  app.use('/api/users', createUserRoutes(db));
+  // Cada dominio tiene una única implementación, publicada con prefijos en inglés y en español.
+  app.use(['/api/bicycles', '/api/bicicletas', '/api/bicicleta'], bicycleRoutes.router);
+  app.use(['/api/stations', '/api/estaciones', '/api/estacion'], stationRoutes.router);
+  app.use(['/api/users', '/api/usuarios', '/api/usuario'], userRoutes.router);
+  app.use(['/api/trips', '/api/viajes'], tripRoutes.router);
+  app.use(['/api/maintenance', '/api/mantenimientos', '/api/mantenimiento'], maintenanceRoutes.router);
+  app.use(['/api/maintenance-tasks', '/api/tareas-mantenimiento'], createMaintenanceTaskRoutes(db));
   if (sync) app.use('/api/sync', createSyncRoutes(sync));
 
   return app;
@@ -104,8 +89,8 @@ export function createApp(db: Db, sync?: SyncService): Express {
 
 export async function ensureApplicationIndexes(db: Db): Promise<void> {
   await Promise.all([
-    new UsuarioRepositoryMongo(db).ensureIndexes(),
-    new ViajeRepositoryMongo(db).ensureIndexes(),
-    new CodigoDesbloqueoRepositoryMongo(db).ensureIndexes()
+    new UserRepositoryMongo(db).ensureIndexes(),
+    new TripRepositoryMongo(db).ensureIndexes(),
+    new UnlockCodeRepositoryMongo(db).ensureIndexes()
   ]);
 }

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { API_BASE_URL } from '../api-config';
 
 export type ZonaBicicleta = 'cadena' | 'rueda_trasera' | 'rueda_delantera' | 'manubrio' | 'frenos' | 'asiento';
 
@@ -25,7 +26,7 @@ export interface TareaMantenimiento {
 
 @Injectable({ providedIn: 'root' })
 export class TareaMantenimientoService {
-  private readonly api = 'http://localhost:3000/api/tareas-mantenimiento';
+  private readonly api = `${API_BASE_URL}/tareas-mantenimiento`;
 
   constructor(private http: HttpClient) {}
 

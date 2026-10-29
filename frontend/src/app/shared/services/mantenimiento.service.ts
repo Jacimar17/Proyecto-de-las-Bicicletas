@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { API_BASE_URL } from '../api-config';
 
 export type EstadoMantenimiento = 'DISPONIBLE' | 'EN_MANTENIMIENTO';
 
@@ -23,7 +24,7 @@ export interface Mantenimiento {
 
 @Injectable({ providedIn: 'root' })
 export class MantenimientoService {
-  private readonly api = 'http://localhost:3000/api/mantenimientos';
+  private readonly api = `${API_BASE_URL}/mantenimientos`;
 
   constructor(private http: HttpClient) {}
 

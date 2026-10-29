@@ -16,6 +16,6 @@ test("TypeScript CLI menu starts and exits through its menu option", () => {
 
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /SISTEMA DE ALQUILER DE BICICLETAS/);
+  assert.match(result.stdout, /SISTEMA DE BICICLETAS COMPARTIDAS DE VENADO TUERTO/);
   assert.match(result.stdout, /¡Hasta luego!/);
 });

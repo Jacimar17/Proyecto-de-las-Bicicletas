@@ -1,15 +1,8 @@
 import { ApiClient } from "./api-client";
 import { ask, closePrompt } from "./terminal";
-import type {
-  ApiData,
-  Bicycle,
-  SessionUser,
-  Station,
-  Trip,
-  User,
-} from './types';
+import type { Bicycle, SessionUser, Station, Trip, User } from "./types";
 
-// Variable global para guardar el usuario logueado (token y email)
+// Usuario con sesión iniciada (token incluido)
 let currentUser: SessionUser | null = null;
 const apiClient = new ApiClient(() => currentUser?.token ?? null);
 
@@ -18,51 +11,41 @@ function print(obj: unknown): void {
   console.log(JSON.stringify(obj, null, 2));
 }
 
-function getBicycles(data: ApiData): Bicycle[] {
-  if (Array.isArray(data.data)) return data.data as Bicycle[];
-  return data.data ? [data.data as Bicycle] : [];
-}
-
-// ---------- Llamadas a la API ----------
 function apiFetch(
   path: string,
   method = "GET",
-  body: Record<string, unknown> | null = null,
-  extraHeaders: Record<string, string> = {}
-): ReturnType<ApiClient['request']> {
-  return apiClient.request(path, method, body, extraHeaders);
+  body: Record<string, unknown> | null = null
+): ReturnType<ApiClient["request"]> {
+  return apiClient.request(path, method, body);
 }
 
-function translateStatus(status: string): string {
-  const map: Record<string, string> = {
-    AVAILABLE: "DISPONIBLE",
-    IN_USE: "EN USO",
-    NOT_SUITABLE: "NO APTA",
-  };
-  return map[status] || status;
-}
-
-function showBicycles(bicycles: Bicycle[] | undefined): void {
-  if (!bicycles || bicycles.length === 0) {
+function showBicycles(bicycles: Bicycle[]): void {
+  if (bicycles.length === 0) {
     console.log("No hay bicicletas registradas.\n");
     return;
   }
-  bicycles.forEach((b, i) => {
+  bicycles.forEach((bicycle, i) => {
     console.log(`\n--- Bicicleta ${i + 1} ---`);
-    console.log(`ID: ${b._id}`);
-    console.log(`Código: ${b.code}`);
-    console.log(`Estación: ${b.currentStation}`);
-    console.log(`Estado: ${translateStatus(b.status)}`);
-    console.log(`Código de bloqueo: ${b.unlockCode}`);
-    if (b.rentedBy) {
-      console.log(`Solicitada por: ${b.rentedBy}`);
-    }
+    console.log(`ID: ${bicycle.id}`);
+    console.log(`Código: ${bicycle.codigo}`);
+    console.log(`Modelo: ${bicycle.modelo}`);
+    console.log(`Ubicación: ${bicycle.ubicacion}`);
+    console.log(`Estado: ${bicycle.estado.replace(/_/g, " ")}`);
   });
   console.log("");
 }
 
+async function getBicycles(): Promise<Bicycle[] | null> {
+  const { status, data } = await apiFetch("/api/bicycles");
+  if (status !== 200 || !Array.isArray(data)) {
+    print(data);
+    return null;
+  }
+  return data as Bicycle[];
+}
+
 // ---------- FLUJO: Login ----------
-async function doLogin() {
+async function doLogin(): Promise<boolean> {
   console.log("\n===== INICIO DE SESIÓN =====");
   console.log("(Si aún no tienes cuenta, elige la opción de registro en el menú principal)");
 
@@ -71,47 +54,31 @@ async function doLogin() {
 
   const { status, data } = await apiFetch("/api/users/login", "POST", { email, password });
 
-  if (status === 200 && data.ok && data.user && data.token) {
-    const userEmail = data.user.email;
-    // El usuario admin se reconoce por email y/o por rol
-    const role =
-      (data.user.role || "cliente").toLowerCase() === "admin" ||
-      userEmail.toLowerCase() === "admin@gmail.com"
-        ? "admin"
-        : "cliente";
-
-    const loggedUser: SessionUser = {
+  if (status === 200 && data.user && data.token) {
+    currentUser = {
       token: data.token,
-      email: userEmail,
-      name: data.user.name,
-      role,
+      email: data.user.email,
+      nombre: data.user.nombre,
+      role: data.role || data.user.role || "cliente",
     };
-    currentUser = loggedUser;
-    console.log(`\n¡Bienvenido, ${loggedUser.name}! Rol: ${loggedUser.role.toUpperCase()}\n`);
+    console.log(`\n¡Bienvenido, ${currentUser.nombre}! Rol: ${currentUser.role.toUpperCase()}\n`);
     return true;
-  } else {
-    console.log(`\nError: ${data.mensaje || data.message || "No se pudo iniciar sesión"}\n`);
-    return false;
   }
+  console.log(`\nError: ${data.message || data.error || "No se pudo iniciar sesión"}\n`);
+  return false;
 }
 
-// ---------- Roles ----------
 function isAdmin(): boolean {
-  return Boolean(
-    currentUser &&
-    (currentUser.role === "admin" || currentUser.email.toLowerCase() === "admin@gmail.com")
-  );
+  return currentUser?.role === "admin";
 }
 
 // ---------- MENÚ CLIENTE ----------
 async function clientMenu(): Promise<"login" | "exit"> {
-  let running = true;
-
-  while (running) {
+  while (true) {
     const user = currentUser;
     if (!user) return "login";
     console.log("\n========= MENÚ CLIENTE =========");
-    console.log(`Usuario: ${user.name} (${user.email})`);
+    console.log(`Usuario: ${user.nombre} (${user.email})`);
     console.log("1. Ver estaciones y bicicletas disponibles");
     console.log("2. Iniciar un viaje");
     console.log("3. Devolver bicicleta");
@@ -147,11 +114,10 @@ async function clientMenu(): Promise<"login" | "exit"> {
         console.log("Opción no válida.");
     }
   }
-  return "exit";
 }
 
 async function getStations(): Promise<Station[] | null> {
-  const { status, data } = await apiFetch("/api/estaciones");
+  const { status, data } = await apiFetch("/api/stations");
   if (status !== 200) {
     print(data);
     return null;
@@ -190,7 +156,7 @@ async function chooseStation(stations: Station[]): Promise<Station | null> {
 }
 
 async function getStationDetails(stationId: string): Promise<Station | null> {
-  const { status, data } = await apiFetch(`/api/estacion/${stationId}`);
+  const { status, data } = await apiFetch(`/api/stations/${stationId}`);
   if (status !== 200) {
     print(data);
     return null;
@@ -254,8 +220,8 @@ async function clientStartTrip(): Promise<void> {
     console.log("\nViaje cancelado.\n");
     return;
   }
-  const generatedCode = await apiFetch("/api/viajes/codigo-desbloqueo", "POST", {
-    bicicletaId: bicycle.id,
+  const generatedCode = await apiFetch("/api/trips/unlock-code", "POST", {
+    bicicleta_id: bicycle.id,
   });
   if (generatedCode.status !== 201 || !generatedCode.data.codigo) {
     print(generatedCode.data);
@@ -263,26 +229,26 @@ async function clientStartTrip(): Promise<void> {
   }
   console.log(`\nCódigo de desbloqueo (vence ${new Date(generatedCode.data.expira_en || "").toLocaleTimeString()}): ${generatedCode.data.codigo}`);
   const unlockCode = await ask("Ingresá el código generado: ");
-  const { status, data } = await apiFetch("/api/viajes", "POST", { bicicletaId: bicycle.id, codigoDesbloqueo: unlockCode });
+  const { status, data } = await apiFetch("/api/trips", "POST", {
+    bicicleta_id: bicycle.id,
+    codigo_desbloqueo: unlockCode,
+  });
   if (status === 201) {
-    const trip = data.data as Trip;
-    console.log(`\n${data.message || "Viaje iniciado"}.`);
+    console.log("\nViaje iniciado.");
     console.log(`Origen: ${station.nombre}`);
-    console.log(`Fecha y hora de inicio: ${new Date(trip.fechaInicio).toLocaleString()}\n`);
+    console.log(`Fecha y hora de inicio: ${new Date(data.fecha_inicio || "").toLocaleString()}\n`);
   } else {
     print(data);
   }
 }
 
 async function clientFinishTrip(): Promise<void> {
-  const user = currentUser;
-  if (!user) return;
-  const { status: historyStatus, data: historyData } = await apiFetch("/api/viajes/mis-viajes");
-  if (historyStatus !== 200 || !Array.isArray(historyData)) {
-    print(historyData);
+  const { status: activeStatus, data: activeData } = await apiFetch("/api/trips/active");
+  if (activeStatus !== 200) {
+    print(activeData);
     return;
   }
-  const activeTrip = (historyData as Trip[]).find((trip) => !trip.fechaFin);
+  const activeTrip = activeData as unknown as Trip | null;
   if (!activeTrip) {
     console.log("\nNo tienes viajes activos para finalizar.\n");
     return;
@@ -290,21 +256,18 @@ async function clientFinishTrip(): Promise<void> {
 
   const stations = await getActiveStations();
   if (!stations) return;
-  console.log(`\n----- DEVOLVER BICICLETA ${activeTrip.bicicletaId} -----`);
+  console.log(`\n----- DEVOLVER BICICLETA ${activeTrip.bicicleta_id} -----`);
   console.log("Selecciona la estación habilitada donde dejarás la bicicleta:");
   const station = await chooseStation(stations);
   if (!station) return;
 
-  const { status, data } = await apiFetch(
-    `/api/viajes/${activeTrip.id}/devolver`,
-    "PATCH",
-    { estacionDestinoId: station.id }
-  );
+  const { status, data } = await apiFetch("/api/trips/active/finish", "PATCH", {
+    estacion_destino_id: station.id,
+  });
   if (status === 200) {
-    const trip = data.data as Trip;
-    console.log(`\n${data.message || "Viaje finalizado"}.`);
+    console.log("\nBicicleta devuelta; viaje finalizado.");
     console.log(`Destino: ${station.nombre}`);
-    console.log(`Fecha y hora de finalización: ${new Date(trip.fechaFin as string).toLocaleString()}\n`);
+    console.log(`Fecha y hora de finalización: ${new Date(data.fecha_fin as string).toLocaleString()}\n`);
     console.log(`Puntuación actual: ${data.puntuacion ?? "no disponible"}/10`);
     if (data.bloqueado) {
       console.log("Tu cuenta quedó bloqueada. Contacta a un administrador.\n");
@@ -317,7 +280,7 @@ async function clientFinishTrip(): Promise<void> {
 }
 
 async function clientTripHistory(): Promise<void> {
-  const { status, data } = await apiFetch("/api/viajes/mis-viajes");
+  const { status, data } = await apiFetch("/api/trips");
   if (status !== 200 || !Array.isArray(data)) {
     print(data);
     return;
@@ -334,27 +297,25 @@ async function clientTripHistory(): Promise<void> {
     stations.find((station) => station.id === id)?.nombre || id || "Pendiente";
   console.log("\n----- HISTORIAL DE VIAJES -----");
   trips.forEach((trip, index) => {
-    console.log(`\n${index + 1}. Bicicleta: ${trip.bicicletaId}`);
-    console.log(`   Origen: ${stationName(trip.estacionOrigenId)}`);
-    console.log(`   Inicio: ${new Date(trip.fechaInicio).toLocaleString()}`);
-    console.log(`   Destino: ${stationName(trip.estacionDestinoId)}`);
-    console.log(`   Finalización: ${trip.fechaFin ? new Date(trip.fechaFin).toLocaleString() : "Viaje activo"}`);
+    console.log(`\n${index + 1}. Bicicleta: ${trip.bicicleta_id}`);
+    console.log(`   Origen: ${stationName(trip.estacion_origen_id)}`);
+    console.log(`   Inicio: ${new Date(trip.fecha_inicio).toLocaleString()}`);
+    console.log(`   Destino: ${stationName(trip.estacion_destino_id)}`);
+    console.log(`   Finalización: ${trip.fecha_fin ? new Date(trip.fecha_fin).toLocaleString() : "Viaje activo"}`);
   });
   console.log("");
 }
 
 // ---------- MENÚ ADMIN ----------
 async function adminMenu(): Promise<"login" | "exit"> {
-  let running = true;
-
-  while (running) {
+  while (true) {
     const user = currentUser;
     if (!user) return "login";
     console.log("\n========= MENÚ ADMINISTRADOR =========");
-    console.log(`Administrador: ${user.name}`);
+    console.log(`Administrador: ${user.nombre}`);
     console.log("1. Ver estado de todas las bicicletas");
-    console.log("2. Marcar bicicleta como APTA");
-    console.log("3. Marcar bicicleta como NO APTA");
+    console.log("2. Marcar bicicleta como DISPONIBLE (apta)");
+    console.log("3. Marcar bicicleta EN MANTENIMIENTO (no apta)");
     console.log("4. Gestión de bicicletas (CRUD)");
     console.log("5. Gestión de usuarios (CRUD)");
     console.log("6. Cerrar sesión");
@@ -366,10 +327,10 @@ async function adminMenu(): Promise<"login" | "exit"> {
         await adminViewAllBicycles();
         break;
       case "2":
-        await adminMarkStatus("AVAILABLE");
+        await adminMarkStatus("DISPONIBLE");
         break;
       case "3":
-        await adminMarkStatus("NOT_SUITABLE");
+        await adminMarkStatus("EN_MANTENIMIENTO");
         break;
       case "4":
         await adminBicycleCrud();
@@ -387,51 +348,32 @@ async function adminMenu(): Promise<"login" | "exit"> {
         console.log("Opción no válida.");
     }
   }
-  return "exit";
 }
 
-async function adminViewAllBicycles() {
-  const { status, data } = await apiFetch("/api/bicycles");
-  if (status === 200) {
-    console.log("\n----- ESTADO DE TODAS LAS BICICLETAS -----");
-    showBicycles(getBicycles(data));
+async function adminViewAllBicycles(): Promise<void> {
+  const bicycles = await getBicycles();
+  if (!bicycles) return;
+  console.log("\n----- ESTADO DE TODAS LAS BICICLETAS -----");
+  showBicycles(bicycles);
+}
+
+async function adminMarkStatus(targetStatus: "DISPONIBLE" | "EN_MANTENIMIENTO"): Promise<void> {
+  const bicycleId = await ask("Ingresa el ID de la bicicleta: ");
+  const { status, data } = await apiFetch("/api/maintenance", "POST", {
+    bicicleta_id: bicycleId,
+    estado: targetStatus,
+  });
+
+  if (status === 201) {
+    console.log(`\nEstado actualizado: ${targetStatus.replace(/_/g, " ")}\n`);
+  } else if (status === 403) {
+    console.log("\nAcceso denegado: no tienes permisos de administrador.\n");
   } else {
     print(data);
   }
 }
 
-async function adminMarkStatus(targetStatus: string): Promise<void> {
-  const user = currentUser;
-  if (!user) return;
-  const bikeId = await ask("Ingresa el ID de la bicicleta: ");
-  const technician = await ask("Nombre del técnico: ");
-
-  const action = targetStatus === "AVAILABLE" ? "suitable" : "not-suitable";
-  const tech = { technician };
-
-  const { status, data } = await apiFetch(
-    `/api/maintenance/${bikeId}/${action}`,
-    "PATCH",
-    tech,
-    { "x-user-email": user.email }
-  );
-
-  if (status === 200) {
-    console.log(`\n${data.message || "Operación exitosa"}`);
-    const bicycle = getBicycles(data)[0];
-    if (bicycle) {
-      console.log(`Estado actual: ${translateStatus(bicycle.status)}\n`);
-    }
-  } else {
-    if (status === 403) {
-      console.log("\nAcceso denegado: no tienes permisos de administrador.\n");
-    } else {
-      print(data);
-    }
-  }
-}
-
-async function adminBicycleCrud() {
+async function adminBicycleCrud(): Promise<void> {
   let running = true;
 
   while (running) {
@@ -469,46 +411,54 @@ async function adminBicycleCrud() {
   }
 }
 
-async function createBicycleFlow() {
-  const code = await ask("Código: ");
-  const currentStation = await ask("Estación actual: ");
-  const unlockCode = await ask("Código de bloqueo: ");
-  const status = await ask("Estado (AVAILABLE/IN_USE/NOT_SUITABLE) [Enter = AVAILABLE]: ");
+async function createBicycleFlow(): Promise<void> {
+  const codigo = await ask("Código: ");
+  const modelo = await ask("Modelo: ");
+  const stations = await getStations();
+  if (!stations) return;
+  const station = await chooseStation(stations);
+  if (!station) return;
+  const estado = await ask("Estado (DISPONIBLE/EN_MANTENIMIENTO/APTA/NO_APTA) [Enter = DISPONIBLE]: ");
 
-  const { status: s, data } = await apiFetch("/api/bicycles", "POST", {
-    code,
-    currentStation,
-    unlockCode,
-    status: status || "AVAILABLE",
+  const { status, data } = await apiFetch("/api/bicycles", "POST", {
+    codigo,
+    modelo,
+    ubicacion: station.nombre,
+    estado: estado || "DISPONIBLE",
+    estacion_id: station.id,
+    fecha_ultima_revision: null,
+    tecnico_responsable: null,
   });
 
-  if (s === 201) {
-    console.log(`\nBicicleta creada correctamente. ID: ${getBicycles(data)[0]?._id}\n`);
+  if (status === 201) {
+    console.log(`\nBicicleta creada correctamente. ID: ${(data as unknown as Bicycle).id}\n`);
   } else {
     print(data);
   }
 }
 
-async function getBicycleFlow() {
+async function getBicycleFlow(): Promise<void> {
   const id = await ask("ID de la bicicleta: ");
-  const { status, data } = await apiFetch(`/api/bicycles/${id}`);
-  if (status === 200) {
-    showBicycles(getBicycles(data));
+  const bicycles = await getBicycles();
+  if (!bicycles) return;
+  const bicycle = bicycles.find((item) => item.id === id);
+  if (bicycle) {
+    showBicycles([bicycle]);
   } else {
-    print(data);
+    console.log("\nBicicleta no encontrada.\n");
   }
 }
 
-async function updateBicycleFlow() {
+async function updateBicycleFlow(): Promise<void> {
   const id = await ask("ID de la bicicleta: ");
-  const code = await ask("Nuevo código (Enter = no cambiar): ");
-  const currentStation = await ask("Nueva estación (Enter = no cambiar): ");
-  const unlockCode = await ask("Nuevo código de bloqueo (Enter = no cambiar): ");
+  const codigo = await ask("Nuevo código (Enter = no cambiar): ");
+  const modelo = await ask("Nuevo modelo (Enter = no cambiar): ");
+  const estado = await ask("Nuevo estado (Enter = no cambiar): ");
 
   const body: Record<string, string> = {};
-  if (code) body.code = code;
-  if (currentStation) body.currentStation = currentStation;
-  if (unlockCode) body.unlockCode = unlockCode;
+  if (codigo) body.codigo = codigo;
+  if (modelo) body.modelo = modelo;
+  if (estado) body.estado = estado;
 
   if (Object.keys(body).length === 0) {
     console.log("No se hicieron cambios.\n");
@@ -523,7 +473,7 @@ async function updateBicycleFlow() {
   }
 }
 
-async function deleteBicycleFlow() {
+async function deleteBicycleFlow(): Promise<void> {
   const id = await ask("ID de la bicicleta a eliminar: ");
   const confirm = await ask(`¿Seguro que deseas eliminar la bicicleta ${id}? (si/no): `);
   if (confirm.toLowerCase() !== "si") {
@@ -531,14 +481,14 @@ async function deleteBicycleFlow() {
     return;
   }
   const { status, data } = await apiFetch(`/api/bicycles/${id}`, "DELETE");
-  if (status === 200) {
+  if (status === 204) {
     console.log("\nBicicleta eliminada correctamente.\n");
   } else {
     print(data);
   }
 }
 
-async function adminUserCrud() {
+async function adminUserCrud(): Promise<void> {
   let running = true;
 
   while (running) {
@@ -576,13 +526,14 @@ async function adminUserCrud() {
   }
 }
 
-async function listAllUsers() {
+async function listAllUsers(): Promise<void> {
   const { status, data } = await apiFetch("/api/users");
-  if (status === 200) {
-    console.log(`\n----- USUARIOS (${data.total}) -----`);
-    (data.users || []).forEach((u, i) => {
-      console.log(`\n${i + 1}. ${u.name} ${u.lastName} (${u.email})`);
-      console.log(`   ID: ${u._id} | Rol: ${u.role || "cliente"}`);
+  if (status === 200 && Array.isArray(data)) {
+    const users = data as User[];
+    console.log(`\n----- USUARIOS (${users.length}) -----`);
+    users.forEach((u, i) => {
+      console.log(`\n${i + 1}. ${u.nombre} ${u.apellido ?? ""} (${u.email})`);
+      console.log(`   ID: ${u.id} | Rol: ${u.role || "cliente"}`);
     });
     console.log("");
   } else {
@@ -590,18 +541,14 @@ async function listAllUsers() {
   }
 }
 
-async function getUserByIdFlow() {
+async function getUserByIdFlow(): Promise<void> {
   const id = await ask("ID del usuario: ");
   const { status, data } = await apiFetch(`/api/users/${id}`);
   if (status === 200) {
+    const u = data as unknown as User;
     console.log("\n----- USUARIO -----");
-    const u = data.user;
-    if (!u) {
-      print(data);
-      return;
-    }
-    console.log(`ID: ${u._id}`);
-    console.log(`Nombre: ${u.name} ${u.lastName}`);
+    console.log(`ID: ${u.id}`);
+    console.log(`Nombre: ${u.nombre} ${u.apellido ?? ""}`);
     console.log(`Email: ${u.email}`);
     console.log(`Rol: ${u.role || "cliente"}`);
     console.log("");
@@ -610,16 +557,16 @@ async function getUserByIdFlow() {
   }
 }
 
-async function updateUserFlow() {
+async function updateUserFlow(): Promise<void> {
   const id = await ask("ID del usuario a actualizar: ");
-  const name = await ask("Nuevo nombre (Enter = no cambiar): ");
-  const lastName = await ask("Nuevo apellido (Enter = no cambiar): ");
+  const nombre = await ask("Nuevo nombre (Enter = no cambiar): ");
+  const apellido = await ask("Nuevo apellido (Enter = no cambiar): ");
   const email = await ask("Nuevo email (Enter = no cambiar): ");
   const password = await ask("Nueva contraseña (Enter = no cambiar): ");
 
   const body: Record<string, string> = {};
-  if (name) body.name = name;
-  if (lastName) body.lastName = lastName;
+  if (nombre) body.nombre = nombre;
+  if (apellido) body.apellido = apellido;
   if (email) body.email = email;
   if (password) body.password = password;
 
@@ -631,7 +578,7 @@ async function updateUserFlow() {
   }
 }
 
-async function deleteUserFlow() {
+async function deleteUserFlow(): Promise<void> {
   const id = await ask("ID del usuario a eliminar: ");
   const confirm = await ask(`¿Seguro que deseas eliminar el usuario ${id}? (si/no): `);
   if (confirm.toLowerCase() !== "si") {
@@ -639,7 +586,7 @@ async function deleteUserFlow() {
     return;
   }
   const { status, data } = await apiFetch(`/api/users/${id}`, "DELETE");
-  if (status === 200) {
+  if (status === 204) {
     console.log("\nUsuario eliminado correctamente.\n");
   } else {
     print(data);
@@ -647,55 +594,47 @@ async function deleteUserFlow() {
 }
 
 // ---------- Perfil / Registro compartidos ----------
-async function registerUser() {
+async function registerUser(): Promise<void> {
   console.log("\n----- REGISTRO DE USUARIO -----");
-  const name = await ask("Nombre: ");
-  const lastName = await ask("Apellido: ");
+  const nombre = await ask("Nombre: ");
+  const apellido = await ask("Apellido: ");
+  const dni = await ask("DNI (opcional): ");
   const email = await ask("Email: ");
   const password = await ask("Contraseña (mín. 6 caracteres): ");
 
-  const { status, data } = await apiFetch("/api/users", "POST", {
-    name,
-    lastName,
+  const { status, data } = await apiFetch("/api/users/register", "POST", {
+    nombre,
+    apellido,
+    ...(dni ? { dni } : {}),
     email,
     password,
   });
 
   if (status === 201) {
-    console.log(`\nUsuario creado correctamente. ID: ${data.user?._id}\n`);
+    console.log(`\nUsuario creado correctamente. ID: ${(data as unknown as User).id}\n`);
   } else {
     print(data);
   }
 }
 
-async function viewProfile() {
-  const user = currentUser;
-  if (!user) {
-    console.log("No hay sesión activa.\n");
-    return;
-  }
-  // Buscar el perfil por email a través del listado (protegido por token)
-  const { status, data } = await apiFetch("/api/users");
+async function viewProfile(): Promise<void> {
+  const { status, data } = await apiFetch("/api/users/profile");
   if (status !== 200) {
     print(data);
     return;
   }
-  const me = (data.users || []).find((u) => u.email === user.email);
-  if (me) {
-    console.log("\n----- MI PERFIL -----");
-    console.log(`Nombre: ${me.name} ${me.lastName}`);
-    console.log(`Email: ${me.email}`);
-    console.log(`Rol: ${me.role || "cliente"}`);
-    console.log(`Puntuación: ${me.puntuacion ?? 10}/10`);
-    if (me.bloqueado) {
-      console.log("Estado: Cuenta bloqueada");
-    } else if (me.suspendidoHasta && new Date(me.suspendidoHasta).getTime() > Date.now()) {
-      console.log(`Estado: Suspendida hasta ${new Date(me.suspendidoHasta).toLocaleString()}`);
-    }
-    console.log("");
-  } else {
-    console.log("\nNo se encontró tu perfil.\n");
+  const me = data as unknown as User;
+  console.log("\n----- MI PERFIL -----");
+  console.log(`Nombre: ${me.nombre} ${me.apellido ?? ""}`);
+  console.log(`Email: ${me.email}`);
+  console.log(`Rol: ${me.role || "cliente"}`);
+  console.log(`Puntuación: ${me.puntuacion ?? 10}/10`);
+  if (me.bloqueado) {
+    console.log("Estado: Cuenta bloqueada");
+  } else if (me.suspendidoHasta && new Date(me.suspendidoHasta).getTime() > Date.now()) {
+    console.log(`Estado: Suspendida hasta ${new Date(me.suspendidoHasta).toLocaleString()}`);
   }
+  console.log("");
 }
 
 // ---------- MENÚ PRINCIPAL ----------
@@ -704,7 +643,7 @@ export async function runMenu(): Promise<void> {
     let running = true;
 
     while (running) {
-      console.log("\n========= SISTEMA DE ALQUILER DE BICICLETAS =========");
+      console.log("\n========= SISTEMA DE BICICLETAS COMPARTIDAS DE VENADO TUERTO =========");
       console.log("1. Iniciar sesión");
       console.log("2. Registrar nuevo usuario");
       console.log("3. Salir");
