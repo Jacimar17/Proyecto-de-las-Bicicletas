@@ -141,7 +141,7 @@ test("Spanish user registration and DNI login aliases remain available", async (
   assert.equal(typeof loggedInUser.token, "string");
 });
 
-test("user listing requires authentication and only admins can update accounts", async () => {
+test("user listing requires authentication and admin role, and only admins can update accounts", async () => {
   const baseUrl = await startServer();
   const registration = await fetch(`${baseUrl}/api/users`, {
     method: "POST",
@@ -161,7 +161,13 @@ test("user listing requires authentication and only admins can update accounts",
   const listing = await fetch(`${baseUrl}/api/users`, {
     headers: { authorization: `Bearer ${clientToken}` },
   });
-  assert.equal(listing.status, 200);
+  assert.equal(listing.status, 403);
+
+  const adminListingToken = jwt.sign({ id: "admin-id", role: "admin" }, process.env.JWT_SECRET!);
+  const adminListing = await fetch(`${baseUrl}/api/users`, {
+    headers: { authorization: `Bearer ${adminListingToken}` },
+  });
+  assert.equal(adminListing.status, 200);
 
   const forbidden = await fetch(`${baseUrl}/api/users/${user.id}`, {
     method: "PUT",
