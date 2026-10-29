@@ -5,7 +5,10 @@
   "scripts": {
     "test": "node -r ts-node/register --test tests/*.test.ts test/*.test.ts",
     "start": "node -r ts-node/register server.ts",
-    "dev": "nodemon --exec \"node -r ts-node/register\" server.ts",
+    "start:backend": "nodemon --exec \"node -r ts-node/register\" server.ts",
+    "start:frontend": "npm --prefix frontend start",
+    "predev": "kill-port 3000 4200",
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run start:backend\" \"npm run start:frontend\"",
     "menu": "node -r ts-node/register src/cli/index.ts",
     "seed": "node -r ts-node/register src/seed.ts",
     "migrate:bicis-admin": "node -r ts-node/register src/migrations/rename-bicis-and-admin.ts",
@@ -28,6 +31,8 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.0.1",
+    "concurrently": "^10.0.6",
+    "kill-port": "^2.0.1",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
