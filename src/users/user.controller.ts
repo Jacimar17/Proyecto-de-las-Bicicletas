@@ -83,6 +83,20 @@ export class UserController {
     }
   };
 
+  loginGoogle = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const result = await this.users.loginGoogle(requestBody(req));
+      res.status(200).json({
+        ok: true,
+        mensaje: "Inicio de sesión exitoso",
+        token: result.token,
+        user: result.user,
+      });
+    } catch (error: unknown) {
+      sendError(res, error, "Error al iniciar sesión con Google");
+    }
+  };
+
   login = async (req: Request, res: Response): Promise<void> => {
     try {
       const result = await this.users.login(requestBody(req));

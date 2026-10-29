@@ -5,7 +5,8 @@ export interface User {
   name: string;
   lastName: string;
   email: string;
-  password: string;
+  password?: string;
+  googleId?: string;
   role: UserRole;
   dni?: string;
   nombre?: string;

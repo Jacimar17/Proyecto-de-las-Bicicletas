@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import { MongoServerError } from "mongodb";
 import { ApiError } from "../common/api-error";
@@ -13,8 +14,37 @@ function duplicateKey(error: unknown): boolean {
   return error instanceof MongoServerError && error.code === 11000;
 }
 
+export interface GoogleProfile {
+  googleId?: string;
+  email?: string;
+  emailVerified?: boolean;
+  name?: string;
+  familyName?: string;
+}
+
+export type GoogleVerifier = (credential: string) => Promise<GoogleProfile>;
+
+const googleClient = new OAuth2Client();
+
+async function verifyGoogleCredential(credential: string): Promise<GoogleProfile> {
+  const audience = process.env.GOOGLE_CLIENT_ID;
+  if (!audience) throw new Error("GOOGLE_CLIENT_ID no está configurado");
+  const ticket = await googleClient.verifyIdToken({ idToken: credential, audience });
+  const payload = ticket.getPayload();
+  return {
+    googleId: payload?.sub,
+    email: payload?.email,
+    emailVerified: payload?.email_verified,
+    name: payload?.name,
+    familyName: payload?.family_name,
+  };
+}
+
 export class UserService {
-  constructor(private readonly users: UserRepository) {}
+  constructor(
+    private readonly users: UserRepository,
+    private readonly verifyGoogle: GoogleVerifier = verifyGoogleCredential
+  ) {}
 
   async create(data: unknown): Promise<PublicUser> {
     const body = isRecord(data) ? data : {};
@@ -150,9 +180,53 @@ export class UserService {
       : dni
         ? await this.users.findByDni(dni)
         : await this.users.findByName(name);
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user || !user.password || !(await bcrypt.compare(password, user.password))) {
       throw new ApiError("Credenciales incorrectas", 401);
     }
+    return this.authenticated(user);
+  }
+
+  async loginGoogle(data: unknown): Promise<{ user: PublicUser; token: string }> {
+    const body = isRecord(data) ? data : {};
+    const credential = typeof body.credential === "string" ? body.credential : "";
+    if (!credential) throw new ApiError("La credencial de Google es obligatoria", 400);
+
+    let profile: GoogleProfile;
+    try {
+      profile = await this.verifyGoogle(credential);
+    } catch {
+      throw new ApiError("Credencial de Google no válida", 401);
+    }
+    if (!profile.googleId || !profile.email || !profile.emailVerified) {
+      throw new ApiError("La cuenta de Google no tiene un email verificado", 401);
+    }
+    const email = profile.email.trim().toLowerCase();
+
+    let user = await this.users.findByGoogleId(profile.googleId);
+    if (!user) {
+      const existing = await this.users.findByEmail(email);
+      if (existing?.id) {
+        user = await this.users.update(existing.id, { googleId: profile.googleId });
+      } else {
+        const name = profile.name?.trim() || email.split("@")[0];
+        user = await this.users.create({
+          name,
+          lastName: profile.familyName?.trim() ?? "",
+          email,
+          googleId: profile.googleId,
+          role: "cliente",
+          nombre: name,
+          puntuacion: 10,
+          suspendidoHasta: null,
+          bloqueado: false,
+        });
+      }
+    }
+    if (!user) throw new ApiError("No se pudo vincular la cuenta de Google", 500);
+    return this.authenticated(user);
+  }
+
+  private authenticated(user: User): { user: PublicUser; token: string } {
     if (user.bloqueado) {
       throw new ApiError("Tu cuenta está bloqueada y no puede utilizarse", 403);
     }

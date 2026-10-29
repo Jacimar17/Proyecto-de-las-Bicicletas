@@ -30,6 +30,11 @@ export class UserRepositoryMongo implements UserRepository {
     return document ? this.toEntity(document) : null;
   }
 
+  async findByGoogleId(googleId: string): Promise<User | null> {
+    const document = await this.collection.findOne({ googleId });
+    return document ? this.toEntity(document) : null;
+  }
+
   async findByDni(dni: string): Promise<User | null> {
     const document = await this.collection.findOne({ dni });
     return document ? this.toEntity(document) : null;

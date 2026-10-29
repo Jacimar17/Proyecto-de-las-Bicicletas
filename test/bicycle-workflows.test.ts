@@ -104,6 +104,7 @@ function makeAccountRepositories(): { users: UserRepository; usuarios: UsuarioRe
             findAll: async () => [user],
             findById: async id => id === user.id ? { ...user } : null,
             findByEmail: async () => null,
+            findByGoogleId: async () => null,
             findByDni: async () => null,
             findByName: async () => null,
             create: async data => ({ ...data, id: 'user-2' }),

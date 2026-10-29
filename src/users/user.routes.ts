@@ -11,6 +11,7 @@ export function createUserRoutes(db: Db): Router {
   const controller = new UserController(service);
 
   router.post("/login", controller.login);
+  router.post("/login/google", controller.loginGoogle);
   router.post("/registro", controller.create);
   router.post("/", controller.create);
   router.get("/", authenticate, controller.getAll);

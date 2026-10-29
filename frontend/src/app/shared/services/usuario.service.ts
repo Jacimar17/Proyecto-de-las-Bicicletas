@@ -43,6 +43,11 @@ export class UsuarioService {
       .pipe(map(response => ({ user: response, token: response.token, role: response.role })));
   }
 
+  loginGoogle(credential: string): Observable<LoginResponse> {
+    return this.http.post<{ user: Usuario; token: string }>(`${this.api}/users/login/google`, { credential })
+      .pipe(map(response => ({ user: response.user, token: response.token, role: response.user.role })));
+  }
+
   registro(data: RegistroRequest): Observable<Usuario> {
     return this.http.post<Usuario>(`${this.api}/usuario/registro`, data);
   }
