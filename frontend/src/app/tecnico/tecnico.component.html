@@ -2,32 +2,95 @@
   <header class="page-intro">
     <p class="eyebrow">OPERACIONES DE FLOTA</p>
     <h1>Gestión de mantenimiento</h1>
-    <p>Revisá el estado de cada bicicleta y registrá los cambios de mantenimiento.</p>
+    <p>Retirá una bicicleta de su estación, registrá las tareas por zona y devolvela.</p>
   </header>
-
 
   <section class="fleet-section">
     <div class="section-heading">
-      <div><h2>Estado de la flota</h2><p>Seleccioná una acción para actualizar una bicicleta.</p></div>
-      <span class="fleet-count">{{ bicicletas.length }} bicicletas</span>
+      <div><h2>1. Elegí la estación y la bicicleta</h2><p>Seleccioná dónde se encuentra la bicicleta que vas a retirar.</p></div>
     </div>
-  <div class="tabla-wrap">
-    <table>
-      <thead><tr><th>ID</th><th>Código</th><th>Modelo</th><th>Ubicación</th><th>Estado</th><th>Última actualización</th><th>Acciones</th></tr></thead>
-      <tbody>
-        <tr *ngFor="let bicicleta of bicicletas">
-          <td>{{ bicicleta.id }}</td><td>{{ bicicleta.codigo }}</td><td>{{ bicicleta.modelo }}</td><td>{{ bicicleta.ubicacion }}</td>
-          <td><span class="status-pill" [class.maintenance-state]="bicicleta.estado === 'EN_MANTENIMIENTO'">{{ bicicleta.estado }}</span></td>
-          <td>{{ bicicleta.fecha_ultima_revision ? (bicicleta.fecha_ultima_revision | date:'short') : '—' }}</td>
-          <td class="acciones">
-            <button type="button" [disabled]="bicicleta.estado === 'DISPONIBLE'" (click)="actualizar(bicicleta, 'DISPONIBLE')">Marcar disponible</button>
-            <button type="button" class="warning" [disabled]="bicicleta.estado === 'EN_MANTENIMIENTO'" (click)="actualizar(bicicleta, 'EN_MANTENIMIENTO')">En mantenimiento</button>
-          </td>
-        </tr>
-        <tr *ngIf="bicicletas.length === 0"><td colspan="7">No hay bicicletas registradas.</td></tr>
-      </tbody>
-    </table>
-  </div>
+    <div class="origen-form">
+      <label>Estación
+        <select [(ngModel)]="estacionId" (ngModelChange)="cambiarEstacion()" [disabled]="!!enTaller">
+          <option value="">Seleccioná una estación</option>
+          <option *ngFor="let estacion of estaciones" [value]="estacion.id">{{ estacion.nombre }}</option>
+        </select>
+      </label>
+      <label>Bicicleta
+        <select [(ngModel)]="bicicletaId" [disabled]="!estacionId || !!enTaller">
+          <option value="">Seleccioná una bicicleta</option>
+          <option *ngFor="let bicicleta of bicicletasEstacion" [value]="bicicleta.id">
+            {{ bicicleta.codigo }}{{ bicicleta.estado === 'EN_MANTENIMIENTO' ? ' (en mantenimiento)' : '' }}
+          </option>
+        </select>
+      </label>
+      <button type="button" class="primary" [disabled]="!bicicletaId || !!enTaller || procesando" (click)="iniciarMantenimiento()">
+        Retirar para mantenimiento
+      </button>
+    </div>
+  </section>
+
+  <section class="fleet-section" *ngIf="enTaller">
+    <div class="section-heading">
+      <div>
+        <h2>2. Mantenimiento de {{ enTaller.codigo }}</h2>
+        <p>Tocá un punto de la bicicleta y elegí las tareas realizadas.</p>
+      </div>
+      <span class="fleet-count">{{ nombreEstacion }}</span>
+    </div>
+
+    <div class="taller">
+      <svg class="bici-svg" viewBox="0 0 600 340" role="group" aria-label="Diagrama de la bicicleta">
+        <g class="trazo">
+          <circle cx="130" cy="240" r="80" />
+          <circle cx="470" cy="240" r="80" />
+          <path d="M130 240 L285 240 L240 120 Z" />
+          <path d="M240 120 L430 130 L285 240" />
+          <path d="M430 130 L470 240" />
+          <path d="M240 120 L225 98 M205 98 L250 98" />
+          <path d="M430 130 L418 92 M398 88 L448 96" />
+          <circle cx="285" cy="240" r="18" />
+          <path d="M130 240 L285 222 M130 240 L285 258" class="cadena-trazo" />
+        </g>
+        <g *ngFor="let punto of [
+            { id: 'asiento', x: 225, y: 78 },
+            { id: 'manubrio', x: 420, y: 70 },
+            { id: 'frenos', x: 435, y: 190 },
+            { id: 'cadena', x: 205, y: 262 },
+            { id: 'rueda_trasera', x: 130, y: 140 },
+            { id: 'rueda_delantera', x: 470, y: 140 }
+          ]"
+          class="hotspot" [class.activo]="zonaActiva === punto.id" [class.con-tareas]="cantidadZona(punto.id) > 0"
+          role="button" tabindex="0" [attr.aria-label]="etiquetaZona(punto.id)"
+          (click)="seleccionarZona($any(punto.id))" (keydown.enter)="seleccionarZona($any(punto.id))" (keydown.space)="seleccionarZona($any(punto.id)); $event.preventDefault()">
+          <circle [attr.cx]="punto.x" [attr.cy]="punto.y" r="17" />
+          <text [attr.x]="punto.x" [attr.y]="punto.y + 5" text-anchor="middle">{{ cantidadZona(punto.id) || '+' }}</text>
+          <title>{{ etiquetaZona(punto.id) }}</title>
+        </g>
+      </svg>
+
+      <aside class="menu-tareas">
+        <h3>{{ zonaActiva ? etiquetaZona(zonaActiva) : 'Zona sin seleccionar' }}</h3>
+        <p class="vacio" *ngIf="!zonaActiva">Seleccioná un punto en la bicicleta.</p>
+        <ul *ngIf="zonaActiva">
+          <li *ngFor="let tarea of tareasZona">
+            <label><input type="checkbox" [checked]="tareaElegida(tarea.zona, tarea.nombre)" (change)="alternarTarea(tarea)" /> {{ tarea.nombre }}</label>
+          </li>
+          <li class="vacio" *ngIf="tareasZona.length === 0">No hay tareas configuradas para esta zona.</li>
+        </ul>
+
+        <h4>Tareas registradas ({{ tareasElegidas.length }})</h4>
+        <ul class="resumen">
+          <li *ngFor="let item of tareasElegidas">{{ etiquetaZona(item.zona) }}: {{ item.tarea }}</li>
+          <li class="vacio" *ngIf="tareasElegidas.length === 0">Todavía no elegiste tareas.</li>
+        </ul>
+
+        <div class="acciones-finales">
+          <button type="button" class="primary" [disabled]="procesando" (click)="finalizar()">Finalizar y devolver a la estación</button>
+          <button type="button" class="secondary" [disabled]="procesando" (click)="cancelarSesion()">Cerrar sin cambios</button>
+        </div>
+      </aside>
+    </div>
   </section>
 
   <section class="maintenance-history">
@@ -36,15 +99,21 @@
   </div>
   <div class="tabla-wrap">
     <table>
-      <thead><tr><th>Bicicleta</th><th>Cambio de estado</th><th>Fecha</th><th>Técnico responsable</th></tr></thead>
+      <thead><tr><th>Bicicleta</th><th>Cambio de estado</th><th>Tareas</th><th>Fecha</th><th>Técnico responsable</th></tr></thead>
       <tbody>
         <tr *ngFor="let registro of mantenimientos">
-          <td>{{ registro.bicicleta_id }}</td>
+          <td>{{ codigoBicicleta(registro.bicicleta_id) }}</td>
           <td>{{ registro.estado_anterior }} → {{ registro.estado_nuevo }}</td>
+          <td>
+            <ng-container *ngIf="registro.tareas?.length; else sinTareas">
+              <span *ngFor="let item of registro.tareas">{{ etiquetaZona(item.zona) }}: {{ item.tarea }}<br /></span>
+            </ng-container>
+            <ng-template #sinTareas>—</ng-template>
+          </td>
           <td>{{ registro.fecha_actualizacion | date:'medium' }}</td>
-          <td>{{ registro.tecnico_responsable }} ({{ registro.tecnico_id }})</td>
+          <td>{{ registro.tecnico_responsable }}</td>
         </tr>
-        <tr *ngIf="mantenimientos.length === 0"><td colspan="4">Todavía no hay actualizaciones registradas.</td></tr>
+        <tr *ngIf="mantenimientos.length === 0"><td colspan="5">Todavía no hay actualizaciones registradas.</td></tr>
       </tbody>
     </table>
   </div>

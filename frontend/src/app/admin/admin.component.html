@@ -11,6 +11,7 @@
     <button type="button" [class.active]="seccion === 'estaciones'" (click)="cambiarSeccion('estaciones')">Estaciones</button>
     <button type="button" [class.active]="seccion === 'viajes'" (click)="cambiarSeccion('viajes')">Viajes</button>
     <button type="button" [class.active]="seccion === 'mantenimientos'" (click)="cambiarSeccion('mantenimientos')">Mantenimientos</button>
+    <button type="button" [class.active]="seccion === 'tareas'" (click)="cambiarSeccion('tareas')">Tareas de mantenimiento</button>
   </nav>
 
 
@@ -146,10 +147,38 @@
         <tbody><tr *ngFor="let item of mantenimientos">
           <td>{{ codigoBicicleta(item.bicicleta_id) }}</td>
           <td>{{ item.estado_anterior }}</td>
-          <td>{{ item.estado_nuevo }}</td>
+          <td>{{ item.estado_nuevo }}<small *ngIf="item.tareas?.length"> · {{ item.tareas!.length }} tarea(s)</small></td>
           <td>{{ item.tecnico_responsable }}</td>
           <td>{{ item.fecha_actualizacion | date: 'short' }}</td>
         </tr><tr *ngIf="mantenimientos.length === 0"><td colspan="5">No hay registros de mantenimiento.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section *ngIf="seccion === 'tareas'">
+    <h2>Agregar tarea de mantenimiento</h2>
+    <form class="formulario" (ngSubmit)="agregarTarea()">
+      <label>Zona
+        <select name="zona" [(ngModel)]="tareaForm.zona">
+          <option *ngFor="let zona of zonas" [ngValue]="zona.id">{{ zona.etiqueta }}</option>
+        </select>
+      </label>
+      <label>Tarea<input name="nombreTarea" [(ngModel)]="tareaForm.nombre" required maxlength="80" /></label>
+      <div class="acciones"><button type="submit">Agregar tarea</button></div>
+    </form>
+
+    <h2>Tareas disponibles para los técnicos</h2>
+    <div class="tabla-wrap">
+      <table><thead><tr><th>Zona</th><th>Tarea</th><th>Acciones</th></tr></thead>
+        <tbody>
+          <ng-container *ngFor="let zona of zonas">
+            <tr *ngFor="let tarea of tareasDeZona(zona.id)">
+              <td>{{ zona.etiqueta }}</td><td>{{ tarea.nombre }}</td>
+              <td class="acciones"><button type="button" class="danger" (click)="eliminarTarea(tarea)">Eliminar</button></td>
+            </tr>
+          </ng-container>
+          <tr *ngIf="tareas.length === 0"><td colspan="3">No hay tareas configuradas.</td></tr>
+        </tbody>
       </table>
     </div>
   </section>

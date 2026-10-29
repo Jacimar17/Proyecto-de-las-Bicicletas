@@ -6,4 +6,5 @@ export const COLLECTIONS = {
   trips: "trips",
   unlockCodes: "unlock_codes",
   maintenances: "maintenances",
+  maintenanceTasks: "maintenance_tasks",
 } as const;

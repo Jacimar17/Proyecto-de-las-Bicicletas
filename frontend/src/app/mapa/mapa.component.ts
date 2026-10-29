@@ -31,6 +31,10 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   viajeActivo: Viaje | null = null;
   private map!: L.Map;
   private readonly marcadores = L.layerGroup();
+  private readonly marcadoresPorId = new Map<string, L.Marker>();
+  private popupAbiertoId = '';
+  private refrescando = false;
+  private temporizador?: ReturnType<typeof setInterval>;
 
   constructor(
     private readonly estacionService: EstacionService,
@@ -80,6 +84,8 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
     }).addTo(this.map);
     this.marcadores.addTo(this.map);
     this.cargarEstaciones();
+    // Refresco periódico para reflejar retiros y devoluciones de otros usuarios.
+    this.temporizador = setInterval(() => this.cargarEstaciones(), 10000);
     if (this.esCliente) {
       this.viajeService.getActive().subscribe({
         next: viaje => {
@@ -92,6 +98,7 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    clearInterval(this.temporizador);
     this.map?.remove();
   }
 
@@ -175,14 +182,20 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   private cargarEstaciones(): void {
     this.estacionService.getAll().subscribe({
       next: estaciones => {
+        const primeraCarga = this.estaciones.length === 0;
+        const popupAbierto = this.popupAbiertoId;
         this.estaciones = estaciones;
         this.cargando = false;
+        this.refrescando = true;
         this.marcadores.clearLayers();
+        this.marcadoresPorId.clear();
         estaciones.forEach(estacion => this.agregarMarcador(estacion));
+        this.refrescando = false;
+        if (popupAbierto) this.marcadoresPorId.get(popupAbierto)?.openPopup();
         const coordenadas = estaciones
           .filter(estacion => estacion.activa)
           .map(estacion => [estacion.lat, estacion.lng] as L.LatLngTuple);
-        if (coordenadas.length) {
+        if (primeraCarga && coordenadas.length) {
           this.map.fitBounds(L.latLngBounds(coordenadas), { padding: [40, 40] });
         }
         this.changeDetector.markForCheck();
@@ -213,22 +226,26 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
       iconAnchor: [12, 12]
     });
 
-    L.marker([estacion.lat, estacion.lng], { icon: icono })
+    const id = estacion.id ?? '';
+    const marcador = L.marker([estacion.lat, estacion.lng], { icon: icono })
       .addTo(this.marcadores)
       .bindPopup(this.crearPopup(estacion))
-      .on('click', () => this.seleccionarEstacion(estacion.id ?? ''));
+      .on('click', () => this.seleccionarEstacion(id))
+      .on('popupopen', () => { this.popupAbiertoId = id; })
+      .on('popupclose', () => { if (!this.refrescando && this.popupAbiertoId === id) this.popupAbiertoId = ''; });
+    this.marcadoresPorId.set(id, marcador);
   }
 
   private crearPopup(estacion: Estacion): HTMLElement {
     const contenedor = document.createElement('div');
     const titulo = document.createElement('strong');
-    titulo.textContent = `🚲 ${estacion.nombre}`;
+    titulo.textContent = estacion.nombre;
     const direccion = document.createElement('div');
     direccion.textContent = estacion.direccion;
     const disponibilidad = document.createElement('div');
     disponibilidad.style.marginTop = '6px';
     disponibilidad.textContent = estacion.activa
-      ? `Disponibles: ${Math.min(estacion.disponibles, estacion.capacidad)} de ${estacion.capacidad} bicicletas`
+      ? `Disponibles: ${Math.min(estacion.disponibles, estacion.capacidad)} bicicletas 🚲`
       : 'Estación no habilitada';
     contenedor.append(titulo, direccion, disponibilidad);
     return contenedor;

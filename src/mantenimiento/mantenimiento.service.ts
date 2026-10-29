@@ -1,6 +1,6 @@
 import { ApiError } from '../common/api-error';
 import { BicicletaRepository } from '../bicycles/bicicleta.repository.interface';
-import { Mantenimiento, EstadoMantenimiento } from './mantenimiento.entity';
+import { Mantenimiento, EstadoMantenimiento, TareaRealizada } from './mantenimiento.entity';
 import { MantenimientoRepository } from './mantenimiento.repository.interface';
 
 export class MantenimientoService {
@@ -16,8 +16,13 @@ export class MantenimientoService {
     async updateEstado(
         bicicletaId: string,
         estado: EstadoMantenimiento,
-        tecnico: { id: string; nombre: string }
+        tecnico: { id: string; nombre: string },
+        detalle: { estacion_id?: unknown; tareas?: unknown } = {}
     ): Promise<Mantenimiento> {
+        const tareas = this.normalizarTareas(detalle.tareas);
+        const estacionId = typeof detalle.estacion_id === 'string' && detalle.estacion_id.trim()
+            ? detalle.estacion_id.trim()
+            : null;
         if (typeof bicicletaId !== 'string' || !bicicletaId.trim()) {
             throw new ApiError('El ID de la bicicleta es obligatorio', 400);
         }
@@ -48,7 +53,9 @@ export class MantenimientoService {
             estado_nuevo: estado,
             tecnico_id: tecnico.id,
             tecnico_responsable: tecnico.nombre,
-            fecha_actualizacion: actualizada.fecha_ultima_revision ?? new Date()
+            fecha_actualizacion: actualizada.fecha_ultima_revision ?? new Date(),
+            estacion_id: estacionId ?? bicicleta.estacion_id ?? null,
+            tareas
         };
         try {
             return await this.repository.create(mantenimiento);
@@ -65,5 +72,16 @@ export class MantenimientoService {
             if (!restored) throw new Error('No se pudo guardar el mantenimiento ni restaurar la bicicleta');
             throw error;
         }
+    }
+
+    private normalizarTareas(valor: unknown): TareaRealizada[] {
+        if (valor === undefined) return [];
+        if (!Array.isArray(valor) || valor.length > 50) throw new ApiError('Las tareas no son válidas', 400);
+        return valor.map(item => {
+            const zona = typeof item?.zona === 'string' ? item.zona.trim() : '';
+            const tarea = typeof item?.tarea === 'string' ? item.tarea.trim() : '';
+            if (!zona || !tarea) throw new ApiError('Cada tarea requiere zona y descripción', 400);
+            return { zona, tarea };
+        });
     }
 }

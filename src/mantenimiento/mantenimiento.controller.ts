@@ -20,7 +20,8 @@ export class MantenimientoController {
             res.status(201).json(await this.service.updateEstado(
                 req.body?.bicicleta_id,
                 req.body?.estado,
-                tecnico
+                tecnico,
+                { estacion_id: req.body?.estacion_id, tareas: req.body?.tareas }
             ));
         } catch (error) {
             res.status(errorStatus(error)).json({ message: errorMessage(error) });

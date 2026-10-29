@@ -8,8 +8,9 @@ import { RolUsuario, Usuario, UsuarioService } from '../shared/services/usuario.
 import { Viaje, ViajeService } from '../shared/services/viaje.service';
 import { Mantenimiento, MantenimientoService } from '../shared/services/mantenimiento.service';
 import { NotificationService } from '../shared/notification.service';
+import { ZONAS, TareaMantenimiento, TareaMantenimientoService, ZonaBicicleta, etiquetaZona } from '../shared/services/tarea-mantenimiento.service';
 
-type SeccionAdmin = 'usuarios' | 'bicicletas' | 'estaciones' | 'viajes' | 'mantenimientos';
+type SeccionAdmin = 'usuarios' | 'bicicletas' | 'estaciones' | 'viajes' | 'mantenimientos' | 'tareas';
 
 @Component({
   selector: 'app-admin',
@@ -26,6 +27,14 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   viajes: Viaje[] = [];
   mantenimientos: Mantenimiento[] = [];
   seleccionado: string | null = null;
+  tareas: TareaMantenimiento[] = [];
+  tareaForm: { zona: ZonaBicicleta; nombre: string } = { zona: 'cadena', nombre: '' };
+  readonly zonas = ZONAS;
+  readonly etiquetaZona = etiquetaZona;
+
+  tareasDeZona(zona: ZonaBicicleta): TareaMantenimiento[] {
+    return this.tareas.filter(tarea => tarea.zona === zona);
+  }
 
 
   usuarioForm = {
@@ -54,6 +63,7 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
     private readonly usuarioService: UsuarioService,
     private readonly viajeService: ViajeService,
     private readonly mantenimientoService: MantenimientoService,
+    private readonly tareaService: TareaMantenimientoService,
     private readonly cdr: ChangeDetectorRef,
     private readonly notifications: NotificationService
   ) {}
@@ -97,6 +107,7 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.seccion = seccion;
     if (seccion === 'viajes') this.cargarViajes();
     if (seccion === 'mantenimientos') this.cargarMantenimientos();
+    if (seccion === 'tareas') this.cargarTareas();
   }
 
   private cargarViajes(): void {
@@ -114,9 +125,52 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   guardar(): void {
-    if (this.seccion === 'usuarios') this.guardarUsuario();
-    else if (this.seccion === 'bicicletas') this.guardarBicicleta();
-    else if (this.seccion === 'estaciones') this.guardarEstacion();
+    const accion = this.descripcionGuardado();
+    void this.notifications.confirmarCambio(accion).then(ok => {
+      if (!ok) return;
+      if (this.seccion === 'usuarios') this.guardarUsuario();
+      else if (this.seccion === 'bicicletas') this.guardarBicicleta();
+      else if (this.seccion === 'estaciones') this.guardarEstacion();
+    });
+  }
+
+  private descripcionGuardado(): string {
+    const verbo = this.seleccionado ? 'modificar' : 'agregar';
+    if (this.seccion === 'usuarios') return `Vas a ${verbo} el usuario ${this.usuarioForm.nombre} (DNI: ${this.usuarioForm.dni})`;
+    if (this.seccion === 'bicicletas') return `Vas a ${verbo} la bicicleta ${this.bicicletaForm.codigo}`;
+    return `Vas a ${verbo} la estación ${this.estacionForm.nombre}`;
+  }
+
+  agregarTarea(): void {
+    const nombre = this.tareaForm.nombre.trim();
+    if (!nombre) return;
+    const zona = this.tareaForm.zona;
+    void this.notifications.confirmarCambio(`Vas a agregar la tarea "${nombre}" a la zona ${etiquetaZona(zona)}`).then(ok => {
+      if (!ok) return;
+      this.tareaService.create({ zona, nombre }).subscribe({
+        next: () => { this.notifications.success('Tarea agregada'); this.tareaForm.nombre = ''; this.cargarTareas(); },
+        error: error => this.mostrarError(error)
+      });
+    });
+  }
+
+  eliminarTarea(tarea: TareaMantenimiento): void {
+    if (!tarea.id) return;
+    const id = tarea.id;
+    void this.notifications.confirmarCambio(`Vas a eliminar la tarea "${tarea.nombre}" de la zona ${etiquetaZona(tarea.zona)}`).then(ok => {
+      if (!ok) return;
+      this.tareaService.delete(id).subscribe({
+        next: () => { this.notifications.success('Tarea eliminada'); this.cargarTareas(); },
+        error: error => this.mostrarError(error)
+      });
+    });
+  }
+
+  private cargarTareas(): void {
+    this.tareaService.getAll().subscribe({
+      next: data => { this.tareas = data; this.cdr.markForCheck(); },
+      error: error => this.mostrarError(error)
+    });
   }
 
   editarUsuario(usuario: Usuario): void {
@@ -127,7 +181,7 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   eliminarUsuario(usuario: Usuario): void {
     if (!usuario.id) return;
     const id = usuario.id;
-    void this.notifications.confirm(`¿Eliminar al usuario ${usuario.nombre}?`, 'Eliminar usuario').then(ok => {
+    void this.notifications.confirmarCambio(`Vas a eliminar el usuario ${usuario.nombre} (DNI: ${usuario.dni})`).then(ok => {
       if (!ok) return;
       this.usuarioService.delete(id).subscribe({
         next: () => { this.notifications.success('Usuario eliminado'); this.cargarUsuarios(); },
@@ -144,7 +198,7 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   eliminarBicicleta(bicicleta: Bicicleta): void {
     if (!bicicleta.id) return;
     const id = bicicleta.id;
-    void this.notifications.confirm(`¿Eliminar la bicicleta ${bicicleta.codigo}?`, 'Eliminar bicicleta').then(ok => {
+    void this.notifications.confirmarCambio(`Vas a dar de baja la bicicleta ${bicicleta.codigo}`).then(ok => {
       if (!ok) return;
       this.bicicletaService.delete(id).subscribe({
         next: () => { this.notifications.success('Bicicleta eliminada'); this.cargarBicicletas(); this.cargarEstaciones(); },
@@ -170,7 +224,7 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   eliminarEstacion(estacion: Estacion): void {
     if (!estacion.id) return;
     const id = estacion.id;
-    void this.notifications.confirm(`¿Eliminar la estación ${estacion.nombre}?`, 'Eliminar estación').then(ok => {
+    void this.notifications.confirmarCambio(`Vas a eliminar la estación ${estacion.nombre} (${estacion.direccion})`).then(ok => {
       if (!ok) return;
       this.estacionService.delete(id).subscribe({
         next: () => { this.notifications.success('Estación eliminada'); this.cargarEstaciones(); },

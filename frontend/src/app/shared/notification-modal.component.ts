@@ -7,7 +7,7 @@ import { NotificationService } from './notification.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="modal-backdrop" *ngIf="notifications.current as n" (click)="cancelar()">
+    <div class="modal-backdrop" *ngIf="notifications.current() as n" (click)="cancelar()">
       <section
         class="modal-card"
         [class.is-success]="n.kind === 'success'"
@@ -107,11 +107,11 @@ export class NotificationModalComponent implements AfterViewChecked {
   }
 
   cancelar(): void {
-    this.notifications.close(this.notifications.current?.kind !== 'confirm');
+    this.notifications.close(this.notifications.current()?.kind !== 'confirm');
   }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    if (this.notifications.current) this.cancelar();
+    if (this.notifications.current()) this.cancelar();
   }
 }

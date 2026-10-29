@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 
 export type NotificationKind = 'success' | 'error' | 'confirm';
 
@@ -11,7 +11,8 @@ export interface NotificationState {
 
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
-  current: NotificationState | null = null;
+  // Signal: la app es zoneless y el modal vive fuera del componente que lo dispara.
+  readonly current = signal<NotificationState | null>(null);
   private resolver: ((accepted: boolean) => void) | null = null;
 
   success(message: string, title = 'Listo', detail?: string): void {
@@ -36,16 +37,20 @@ export class NotificationService {
     return new Promise(resolve => this.open({ kind: 'confirm', title, message }, resolve));
   }
 
+  confirmarCambio(accion: string): Promise<boolean> {
+    return this.confirm(accion, '¿Estás seguro de implementar este cambio?');
+  }
+
   close(accepted = true): void {
     const resolver = this.resolver;
     this.resolver = null;
-    this.current = null;
+    this.current.set(null);
     resolver?.(accepted);
   }
 
   private open(state: NotificationState, resolver: ((accepted: boolean) => void) | null = null): void {
     this.resolver?.(false);
     this.resolver = resolver;
-    this.current = state;
+    this.current.set(state);
   }
 }

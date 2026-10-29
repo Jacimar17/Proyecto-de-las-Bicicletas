@@ -4,6 +4,11 @@ import { Observable } from 'rxjs';
 
 export type EstadoMantenimiento = 'DISPONIBLE' | 'EN_MANTENIMIENTO';
 
+export interface TareaRealizada {
+  zona: string;
+  tarea: string;
+}
+
 export interface Mantenimiento {
   id?: string;
   bicicleta_id: string;
@@ -12,6 +17,8 @@ export interface Mantenimiento {
   tecnico_id: string;
   tecnico_responsable: string;
   fecha_actualizacion: string;
+  estacion_id?: string | null;
+  tareas?: TareaRealizada[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -24,7 +31,11 @@ export class MantenimientoService {
     return this.http.get<Mantenimiento[]>(this.api);
   }
 
-  actualizarEstado(bicicletaId: string, estado: EstadoMantenimiento): Observable<Mantenimiento> {
-    return this.http.post<Mantenimiento>(this.api, { bicicleta_id: bicicletaId, estado });
+  actualizarEstado(
+    bicicletaId: string,
+    estado: EstadoMantenimiento,
+    detalle: { estacion_id?: string | null; tareas?: TareaRealizada[] } = {}
+  ): Observable<Mantenimiento> {
+    return this.http.post<Mantenimiento>(this.api, { bicicleta_id: bicicletaId, estado, ...detalle });
   }
 }
