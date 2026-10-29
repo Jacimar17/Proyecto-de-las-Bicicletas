@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Bicicleta, BicicletaService } from '../shared/services/bicicleta.service';
 import { Estacion, EstacionService } from '../shared/services/estacion.service';
@@ -23,16 +23,17 @@ export class ViajesComponent implements OnInit {
   constructor(
     private readonly viajeService: ViajeService,
     private readonly estacionService: EstacionService,
-    private readonly bicicletaService: BicicletaService
+    private readonly bicicletaService: BicicletaService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.estacionService.getAll().subscribe({
-      next: data => this.estaciones = data,
+      next: data => { this.estaciones = data; this.cdr.markForCheck(); },
       error: error => this.mostrarError(error)
     });
     this.bicicletaService.getAll().subscribe({
-      next: data => this.bicicletas = data,
+      next: data => { this.bicicletas = data; this.cdr.markForCheck(); },
       error: error => this.mostrarError(error)
     });
     this.cargarViajes();
@@ -54,6 +55,7 @@ export class ViajesComponent implements OnInit {
         this.historial = data;
         this.viajeActivo = data.find(viaje => viaje.fecha_fin === null) ?? null;
         this.cargando = false;
+        this.cdr.markForCheck();
       },
       error: error => {
         this.cargando = false;
@@ -64,5 +66,6 @@ export class ViajesComponent implements OnInit {
 
   private mostrarError(error: { error?: { message?: string } }): void {
     this.error = error.error?.message ?? 'No se pudieron cargar los viajes';
-  }
+        this.cdr.markForCheck();
+      }
 }

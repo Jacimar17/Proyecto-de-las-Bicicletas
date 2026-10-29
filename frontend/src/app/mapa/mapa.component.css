@@ -497,6 +497,7 @@
 }
 
 .rental-form select,
+.rental-form input,
 .active-trip select {
   width: 100%;
   min-height: 42px;

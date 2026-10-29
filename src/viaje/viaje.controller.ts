@@ -53,7 +53,8 @@ export class ViajeController {
                 user.id,
                 req.body?.bicicleta_id ?? req.body?.bicicletaId,
                 req.body?.estacion_origen_id,
-                user.accountCollection
+                user.accountCollection,
+                req.body?.codigo_desbloqueo ?? req.body?.codigoDesbloqueo
             );
             res.status(201).json(legacyRequest
                 ? { message: 'Viaje iniciado', data: legacyTrip(viaje) }

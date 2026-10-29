@@ -116,7 +116,9 @@
               {{ bicicleta.codigo }} — {{ bicicleta.modelo }}
             </option>
           </select>
-          <button type="button" class="primary-action" [disabled]="!bicicletaId" (click)="comenzarViaje()">Iniciar viaje <span aria-hidden="true">→</span></button>
+          <label for="codigo-desbloqueo">Código de desbloqueo</label>
+          <input id="codigo-desbloqueo" type="text" autocomplete="off" [(ngModel)]="codigoDesbloqueo" placeholder="Ingresá el código de la bicicleta" />
+          <button type="button" class="primary-action" [disabled]="!bicicletaId || !codigoDesbloqueo.trim()" (click)="comenzarViaje()">Iniciar viaje <span aria-hidden="true">→</span></button>
         </div>
       </section>
 

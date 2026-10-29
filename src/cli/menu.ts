@@ -254,7 +254,8 @@ async function clientStartTrip(): Promise<void> {
     console.log("\nViaje cancelado.\n");
     return;
   }
-  const { status, data } = await apiFetch("/api/viajes", "POST", { bicicletaId: bicycle.id });
+  const unlockCode = await ask("Código de desbloqueo de la bicicleta: ");
+  const { status, data } = await apiFetch("/api/viajes", "POST", { bicicletaId: bicycle.id, codigoDesbloqueo: unlockCode });
   if (status === 201) {
     const trip = data.data as Trip;
     console.log(`\n${data.message || "Viaje iniciado"}.`);

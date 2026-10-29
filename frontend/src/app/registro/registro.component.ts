@@ -4,7 +4,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { UsuarioService } from '../shared/services/usuario.service';
 
 @Component({
@@ -23,15 +23,24 @@ export class RegistroComponent {
   error = '';
   cargando = false;
 
-  constructor(private usuarioService: UsuarioService) {}
+  constructor(private usuarioService: UsuarioService, private router: Router) {}
 
   registro(): void {
     this.error = '';
     this.cargando = true;
     this.usuarioService.registro({ nombre: this.nombre, dni: this.dni, email: this.email, password: this.password }).subscribe({
       next: () => {
-        this.cargando = false;
-        alert('¡Registro exitoso! Ya podés iniciar sesión.');
+        this.usuarioService.login({ dni: this.dni, password: this.password }).subscribe({
+          next: response => {
+            this.cargando = false;
+            this.usuarioService.guardarSesion(response);
+            void this.router.navigateByUrl('/mapa');
+          },
+          error: () => {
+            this.cargando = false;
+            void this.router.navigateByUrl('/login');
+          }
+        });
       },
       error: (err) => {
         this.cargando = false;

@@ -40,10 +40,14 @@ export class ViajeService {
         usuarioId: string,
         bicicletaId: string,
         estacionOrigenId?: string,
-        accountCollection?: AccountCollection
+        accountCollection?: AccountCollection,
+        unlockCode?: string
     ): Promise<Viaje> {
         if (typeof bicicletaId !== 'string' || !bicicletaId.trim()) {
             throw new ApiError('La bicicleta es obligatoria', 400);
+        }
+        if (typeof unlockCode !== 'string' || !unlockCode.trim()) {
+            throw new ApiError('El código de desbloqueo es obligatorio', 400);
         }
         const account = await this.findAccount(usuarioId, accountCollection);
         if (!account) throw new ApiError('Usuario no encontrado', 404);
@@ -64,6 +68,11 @@ export class ViajeService {
         if (!estacion.activa) throw new ApiError('La estación no está habilitada', 400);
         if (bicicleta.estacion_id !== originId) {
             throw new ApiError('La bicicleta no pertenece a la estación seleccionada', 400);
+        }
+
+        const expectedCode = (bicicleta.unlockCode ?? bicicleta.codigo).trim();
+        if (unlockCode.trim() !== expectedCode) {
+            throw new ApiError('El código de desbloqueo no es correcto', 403);
         }
 
         const actualizada = await this.bicicletaRepository.updateIfEstado(

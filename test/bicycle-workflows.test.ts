@@ -138,7 +138,7 @@ test('el cliente inicia y devuelve un viaje en otra estación, con estado e hist
     const accounts = makeAccountRepositories();
     const service = new ViajeService(trips, bicycles, makeStationRepository(), accounts.usuarios, accounts.users);
 
-    const active = await service.start('user-1', 'bike-1', stationA.id!);
+    const active = await service.start('user-1', 'bike-1', stationA.id!, undefined, 'BICI-001');
     assert.equal(active.estacion_origen_id, stationA.id);
     assert.ok(active.fecha_inicio instanceof Date);
     assert.equal((await bicycles.findById('bike-1'))?.estado, 'EN_USO');
@@ -164,7 +164,7 @@ test('rechaza alquilar bicicletas en mantenimiento', async () => {
     );
 
     await assert.rejects(
-        service.start('user-1', 'bike-1', stationA.id!),
+        service.start('user-1', 'bike-1', stationA.id!, undefined, 'BICI-001'),
         (error: unknown) => error instanceof ApiError && error.status === 409
     );
 });

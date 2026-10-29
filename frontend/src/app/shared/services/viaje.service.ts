@@ -26,10 +26,11 @@ export class ViajeService {
     return this.http.get<Viaje | null>(`${this.api}/activo`);
   }
 
-  start(bicicletaId: string, estacionOrigenId: string): Observable<Viaje> {
+  start(bicicletaId: string, estacionOrigenId: string, codigoDesbloqueo: string): Observable<Viaje> {
     return this.http.post<Viaje>(this.api, {
       bicicleta_id: bicicletaId,
-      estacion_origen_id: estacionOrigenId
+      estacion_origen_id: estacionOrigenId,
+      codigo_desbloqueo: codigoDesbloqueo
     });
   }
 

@@ -9,6 +9,7 @@ export type EstadoBicicleta =
 export interface Bicicleta {
     id?: string;
     codigo: string;
+    unlockCode?: string;
     modelo: string;
     ubicacion: string;
     estado: EstadoBicicleta;

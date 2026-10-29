@@ -13,7 +13,8 @@ export class BicicletaService {
     ) {}
 
     async getAll(): Promise<Bicicleta[]> {
-        return this.repository.findAll();
+        const bicicletas = await this.repository.findAll();
+        return bicicletas.map(({ unlockCode: _unlockCode, ...publica }) => publica);
     }
 
     async create(data: Bicicleta): Promise<Bicicleta> {

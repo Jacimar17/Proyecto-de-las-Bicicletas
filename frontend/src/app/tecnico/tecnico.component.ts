@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Bicicleta, BicicletaService } from '../shared/services/bicicleta.service';
 import { EstadoMantenimiento, Mantenimiento, MantenimientoService } from '../shared/services/mantenimiento.service';
@@ -18,13 +18,14 @@ export class TecnicoComponent implements OnInit {
 
   constructor(
     private readonly bicicletaService: BicicletaService,
-    private readonly mantenimientoService: MantenimientoService
+    private readonly mantenimientoService: MantenimientoService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.cargar();
     this.mantenimientoService.getAll().subscribe({
-      next: data => this.mantenimientos = data,
+      next: data => { this.mantenimientos = data; this.cdr.markForCheck(); },
       error: error => this.mostrarError(error)
     });
   }
@@ -36,9 +37,10 @@ export class TecnicoComponent implements OnInit {
     this.mantenimientoService.actualizarEstado(bicicleta.id, estado).subscribe({
       next: () => {
         this.mensaje = `Estado actualizado para ${bicicleta.codigo}`;
+        this.cdr.markForCheck();
         this.cargar();
         this.mantenimientoService.getAll().subscribe({
-          next: data => this.mantenimientos = data,
+          next: data => { this.mantenimientos = data; this.cdr.markForCheck(); },
           error: error => this.mostrarError(error)
         });
       },
@@ -48,7 +50,7 @@ export class TecnicoComponent implements OnInit {
 
   private cargar(): void {
     this.bicicletaService.getAll().subscribe({
-      next: data => this.bicicletas = data,
+      next: data => { this.bicicletas = data; this.cdr.markForCheck(); },
       error: error => this.mostrarError(error)
     });
   }
@@ -56,5 +58,6 @@ export class TecnicoComponent implements OnInit {
   private mostrarError(error: { error?: { message?: string } }): void {
     this.error = error.error?.message ?? 'No se pudo completar la operación';
     this.mensaje = '';
-  }
+        this.cdr.markForCheck();
+      }
 }

@@ -1,4 +1,4 @@
-import { Component, AfterViewInit, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, AfterViewInit, OnDestroy } from '@angular/core';
 import * as L from 'leaflet';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -21,6 +21,7 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   estacionIdSeleccionada = '';
   estacionSeleccionada: EstacionDetalle | null = null;
   bicicletaId = '';
+  codigoDesbloqueo = '';
   estacionDestinoId = '';
   viajeActivo: Viaje | null = null;
   error = '';
@@ -31,7 +32,8 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   constructor(
     private readonly estacionService: EstacionService,
     private readonly viajeService: ViajeService,
-    readonly usuarioService: UsuarioService
+    readonly usuarioService: UsuarioService,
+    private readonly changeDetector: ChangeDetectorRef
   ) {}
 
   get bicicletasDisponibles(): Bicicleta[] {
@@ -76,7 +78,10 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
     this.cargarEstaciones();
     if (this.esCliente) {
       this.viajeService.getActive().subscribe({
-        next: viaje => this.viajeActivo = viaje,
+        next: viaje => {
+          this.viajeActivo = viaje;
+          this.changeDetector.markForCheck();
+        },
         error: error => this.mostrarError(error)
       });
     }
@@ -95,21 +100,24 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
       next: estacion => {
         this.estacionSeleccionada = estacion;
         this.estacionDestinoId = estacion.activa ? estacion.id ?? '' : '';
+        this.changeDetector.markForCheck();
       },
       error: error => this.mostrarError(error)
     });
   }
 
   comenzarViaje(): void {
-    if (!this.estacionSeleccionada?.id || !this.bicicletaId) return;
+    if (!this.estacionSeleccionada?.id || !this.bicicletaId || !this.codigoDesbloqueo.trim()) return;
     this.error = '';
     this.mensaje = '';
-    this.viajeService.start(this.bicicletaId, this.estacionSeleccionada.id).subscribe({
+    this.viajeService.start(this.bicicletaId, this.estacionSeleccionada.id, this.codigoDesbloqueo.trim()).subscribe({
       next: viaje => {
         this.viajeActivo = viaje;
         this.bicicletaId = '';
+        this.codigoDesbloqueo = '';
         this.mensaje = 'Viaje iniciado. ¡Buen recorrido!';
         this.actualizarDisponibilidad();
+        this.changeDetector.markForCheck();
       },
       error: error => this.mostrarError(error)
     });
@@ -124,6 +132,7 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
         this.viajeActivo = null;
         this.mensaje = 'Bicicleta devuelta correctamente.';
         this.actualizarDisponibilidad();
+        this.changeDetector.markForCheck();
       },
       error: error => this.mostrarError(error)
     });
@@ -142,6 +151,7 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
         if (coordenadas.length) {
           this.map.fitBounds(L.latLngBounds(coordenadas), { padding: [40, 40] });
         }
+        this.changeDetector.markForCheck();
       },
       error: error => {
         this.cargando = false;
@@ -187,5 +197,6 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   private mostrarError(error: { error?: { message?: string } }): void {
     this.error = error.error?.message ?? 'No se pudo completar la operación';
     this.mensaje = '';
+    this.changeDetector.markForCheck();
   }
 }

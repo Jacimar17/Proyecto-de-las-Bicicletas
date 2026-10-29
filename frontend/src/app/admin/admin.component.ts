@@ -1,4 +1,4 @@
-import { AfterViewChecked, Component, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewChecked, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
@@ -47,7 +47,8 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   constructor(
     private readonly bicicletaService: BicicletaService,
     private readonly estacionService: EstacionService,
-    private readonly usuarioService: UsuarioService
+    private readonly usuarioService: UsuarioService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -198,21 +199,21 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   private cargarUsuarios(): void {
     this.usuarioService.getAll().subscribe({
-      next: data => this.usuarios = data,
+      next: data => { this.usuarios = data; this.cdr.markForCheck(); },
       error: error => this.mostrarError(error)
     });
   }
 
   private cargarBicicletas(): void {
     this.bicicletaService.getAll().subscribe({
-      next: data => this.bicicletas = data,
+      next: data => { this.bicicletas = data; this.cdr.markForCheck(); },
       error: error => this.mostrarError(error)
     });
   }
 
   private cargarEstaciones(): void {
     this.estacionService.getAll().subscribe({
-      next: data => this.estaciones = data,
+      next: data => { this.estaciones = data; this.cdr.markForCheck(); },
       error: error => this.mostrarError(error)
     });
   }
@@ -259,5 +260,6 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   private mostrarError(error: { error?: { message?: string } }): void {
     this.error = error.error?.message ?? 'No se pudo completar la operación';
     this.mensaje = '';
-  }
+        this.cdr.markForCheck();
+      }
 }

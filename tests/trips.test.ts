@@ -201,10 +201,25 @@ test("authenticated client can start, return, and review a trip", async () => {
   });
   const bicycle = await bicycleResponse.json();
 
-  const start = await fetch(`${baseUrl}/api/viajes`, {
+  const invalidCodeStart = await fetch(`${baseUrl}/api/viajes`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: "INCORRECTO" }),
+  });
+  assert.equal(invalidCodeStart.status, 403);
+  const missingCodeStart = await fetch(`${baseUrl}/api/viajes`, {
     method: "POST",
     headers,
     body: JSON.stringify({ bicicletaId: bicycle.id }),
+  });
+  assert.equal(missingCodeStart.status, 400);
+  const publicBicycles = await (await fetch(`${baseUrl}/api/bicicletas`)).json();
+  assert.equal(publicBicycles.some((item: Record<string, unknown>) => "unlockCode" in item), false);
+
+  const start = await fetch(`${baseUrl}/api/viajes`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: bicycle.codigo }),
   });
   const started = await start.json();
   assert.equal(start.status, 201);
@@ -251,7 +266,7 @@ test("slow rides subtract a point, suspend at four, and block further rentals du
   const start = await fetch(`${baseUrl}/api/viajes`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ bicicletaId: bicycle.id }),
+      body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: bicycle.codigo }),
   });
   const started = await start.json();
   const startedAt = new Date(Date.now() - 3 * 60 * 60 * 1000 - 1);
@@ -274,7 +289,7 @@ test("slow rides subtract a point, suspend at four, and block further rentals du
   const blockedStart = await fetch(`${baseUrl}/api/viajes`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ bicicletaId: bicycle.id }),
+      body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: bicycle.codigo }),
   });
   assert.equal(blockedStart.status, 403);
 
@@ -292,7 +307,7 @@ test("reaching one point permanently blocks the account from starting trips", as
   const start = await fetch(`${baseUrl}/api/viajes`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ bicicletaId: bicycle.id }),
+      body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: bicycle.codigo }),
   });
   const started = await start.json();
   await fakeDb.collection("trips").findOneAndUpdate(
@@ -312,7 +327,7 @@ test("reaching one point permanently blocks the account from starting trips", as
   const blockedStart = await fetch(`${baseUrl}/api/viajes`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ bicicletaId: bicycle.id }),
+      body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: bicycle.codigo }),
   });
   assert.equal(blockedStart.status, 403);
 
@@ -330,7 +345,7 @@ test("the trip score updates accounts created through the Spanish usuario API", 
   const start = await fetch(`${baseUrl}/api/viajes`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ bicicletaId: bicycle.id }),
+      body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: bicycle.codigo }),
   });
   const started = await start.json();
   const finish = await fetch(`${baseUrl}/api/viajes/${started.data.id}/devolver`, {
@@ -401,7 +416,7 @@ test("trip endpoints require authentication and reject disabled return stations"
   const start = await fetch(`${baseUrl}/api/viajes`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ bicicletaId: bicycle.id }),
+    body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: bicycle.codigo }),
   });
   const started = await start.json();
 

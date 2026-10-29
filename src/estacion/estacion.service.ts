@@ -36,7 +36,8 @@ export class EstacionService {
     async getById(id: string): Promise<EstacionDetalle> {
         const estacion = await this.estacionRepository.findById(id);
         if (!estacion) throw new EstacionNoEncontradaError('Estación no encontrada');
-        const bicicletas = await this.bicicletaRepository.findByEstacion(id);
+        const bicicletas = (await this.bicicletaRepository.findByEstacion(id))
+            .map(({ unlockCode: _unlockCode, ...publica }) => publica);
         const disponibles = bicicletas.filter(bicicleta => bicicleta.estado === 'DISPONIBLE').length;
         return { ...estacion, bicicletas, disponibles };
     }
