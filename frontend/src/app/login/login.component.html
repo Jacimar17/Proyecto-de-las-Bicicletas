@@ -1,7 +1,17 @@
-<div class="login-container">
-  <mat-card>
+<main class="auth-shell login-container">
+  <section class="auth-intro">
+    <span class="auth-kicker">PEDALEÁ A TU MANERA</span>
+    <h1>Tu próxima aventura empieza acá.</h1>
+    <p>Movete por la ciudad con una bicicleta a mano y una estación siempre cerca.</p>
+    <div class="auth-benefit"><span aria-hidden="true">01</span><strong>Encontrá bicicletas disponibles en el mapa.</strong></div>
+    <div class="auth-benefit"><span aria-hidden="true">02</span><strong>Empezá el viaje desde la estación que elijas.</strong></div>
+    <div class="auth-decoration" aria-hidden="true">↗</div>
+  </section>
+
+  <mat-card class="auth-card">
     <mat-card-header>
-      <mat-card-title>🚲 Iniciar Sesión</mat-card-title>
+      <mat-card-title>Qué bueno verte</mat-card-title>
+      <mat-card-subtitle>Ingresá a tu cuenta para continuar</mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
       <mat-form-field appearance="outline" class="full-width">
@@ -29,4 +39,4 @@
       <p class="centro">¿No tenés cuenta? <a routerLink="/registro">Registrate</a></p>
     </mat-card-footer>
   </mat-card>
-</div>
+</main>

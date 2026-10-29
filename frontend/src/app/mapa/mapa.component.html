@@ -1,68 +1,147 @@
 <main class="mapa-page">
-  <div class="mapa-container">
-    <div *ngIf="cargando" class="spinner-overlay"><mat-spinner></mat-spinner></div>
-    <div id="mapa"></div>
-  </div>
-
-  <section class="alquiler-panel">
-    <h1>Estaciones y bicicletas disponibles</h1>
-    <p class="error" *ngIf="error" role="alert">{{ error }}</p>
-    <p class="success" *ngIf="mensaje" role="status">{{ mensaje }}</p>
-
-    <div class="estaciones-grid">
-      <button
-        type="button"
-        class="estacion-card"
-        *ngFor="let estacion of estaciones"
-        [class.seleccionada]="estacion.id === estacionIdSeleccionada"
-        [disabled]="!estacion.activa"
-        (click)="seleccionarEstacion(estacion.id ?? '')">
-        <strong>{{ estacion.nombre }}</strong>
-        <span>{{ estacion.direccion }}</span>
-        <span>{{ estacion.activa ? (estacion.disponibles + ' bicicletas disponibles') : 'No habilitada' }}</span>
-      </button>
+  <header class="dashboard-heading">
+    <div>
+      <p class="eyebrow">MOVILIDAD URBANA · BICICLETAS COMPARTIDAS</p>
+      <h1>Tu ciudad, a tu ritmo.</h1>
+      <p class="heading-copy">Explorá las estaciones cercanas y encontrá tu próxima bicicleta.</p>
     </div>
+    <div class="dashboard-stats" aria-label="Disponibilidad de la red">
+      <div class="stat-card">
+        <span class="stat-icon station-icon" aria-hidden="true">⌖</span>
+        <span><strong>{{ estacionesActivas }}</strong><small>estaciones activas</small></span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon bike-icon" aria-hidden="true">↗</span>
+        <span><strong>{{ bicicletasTotalesDisponibles }}</strong><small>bicis disponibles</small></span>
+      </div>
+    </div>
+  </header>
 
-    <section *ngIf="estacionSeleccionada as estacion" class="detalle">
-      <h2>{{ estacion.nombre }}</h2>
-      <p>{{ estacion.direccion }} · {{ estacion.disponibles }} disponibles de {{ estacion.capacidad }} espacios</p>
-      <h3>Bicicletas disponibles</h3>
-      <p *ngIf="bicicletasDisponibles.length === 0">No hay bicicletas disponibles en esta estación.</p>
-      <ul *ngIf="bicicletasDisponibles.length > 0">
-        <li *ngFor="let bicicleta of bicicletasDisponibles">
-          {{ bicicleta.codigo }} — {{ bicicleta.modelo }}
-        </li>
-      </ul>
+  <p class="feedback error" *ngIf="error" role="alert">{{ error }}</p>
+  <p class="feedback success" *ngIf="mensaje" role="status">{{ mensaje }}</p>
 
-      <div *ngIf="esCliente && !viajeActivo && bicicletasDisponibles.length > 0" class="reserva">
-        <label for="bicicleta">Seleccionar bicicleta</label>
-        <select id="bicicleta" [(ngModel)]="bicicletaId">
-          <option value="">Selecciona una bicicleta</option>
-          <option *ngFor="let bicicleta of bicicletasDisponibles" [value]="bicicleta.id">
-            {{ bicicleta.codigo }} — {{ bicicleta.modelo }}
-          </option>
-        </select>
-        <button type="button" [disabled]="!bicicletaId" (click)="comenzarViaje()">Iniciar viaje</button>
+  <div class="mapa-layout">
+    <section class="map-card" aria-label="Mapa de estaciones">
+      <div class="map-card-heading">
+        <div>
+          <h2>Explorá el mapa</h2>
+          <p>Seleccioná una estación para ver sus bicicletas.</p>
+        </div>
+        <div class="map-legend" aria-label="Referencias del mapa">
+          <span><i class="legend-dot available"></i> Activa</span>
+          <span><i class="legend-dot inactive"></i> No habilitada</span>
+        </div>
+      </div>
+      <div class="mapa-container">
+        <div *ngIf="cargando" class="spinner-overlay" aria-label="Cargando estaciones"><mat-spinner diameter="42"></mat-spinner></div>
+        <div id="mapa"></div>
       </div>
     </section>
 
-    <section *ngIf="esCliente && viajeActivo" class="viaje-activo">
-      <h2>Viaje en curso</h2>
-      <p>Inicio: {{ viajeActivo.fecha_inicio | date:'medium' }}</p>
-      <p>Origen: {{ nombreEstacion(viajeActivo.estacion_origen_id) }}</p>
-      <label for="destino">Estación habilitada de devolución</label>
-      <select id="destino" [(ngModel)]="estacionDestinoId">
-        <option value="">Selecciona una estación</option>
-        <option *ngFor="let destino of estaciones" [value]="destino.id" [disabled]="!destino.activa">
-          {{ destino.nombre }}{{ destino.activa ? '' : ' (no habilitada)' }}
-        </option>
-      </select>
-      <button type="button" [disabled]="!estacionDestinoId" (click)="devolverBicicleta()">Devolver bicicleta</button>
-      <a routerLink="/viajes">Ver historial de viajes</a>
-    </section>
+    <aside class="stations-panel">
+      <div class="stations-heading">
+        <div>
+          <p class="eyebrow">RED DE ESTACIONES</p>
+          <h2>Encontrá tu bici</h2>
+        </div>
+        <span class="result-count">{{ estacionesFiltradas.length }}</span>
+      </div>
 
-    <p *ngIf="!usuarioService.usuarioActual">
-      <a routerLink="/login">Inicia sesión</a> para alquilar una bicicleta.
-    </p>
-  </section>
+      <label class="search-field">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <span class="visually-hidden">Buscar estación</span>
+        <input type="search" [(ngModel)]="busquedaEstacion" placeholder="Buscar por nombre o dirección" />
+      </label>
+
+      <label class="availability-filter">
+        <input type="checkbox" [(ngModel)]="soloDisponibles" />
+        <span>Mostrar solo con bicicletas</span>
+      </label>
+
+      <div class="station-list" aria-label="Estaciones disponibles">
+      <button
+        type="button"
+        class="station-row"
+        *ngFor="let estacion of estacionesFiltradas"
+        [class.seleccionada]="estacion.id === estacionIdSeleccionada"
+        [disabled]="!estacion.activa"
+        (click)="seleccionarEstacion(estacion.id ?? '')">
+        <span class="station-pin" aria-hidden="true">⌖</span>
+        <span class="station-info">
+          <strong>{{ estacion.nombre }}</strong>
+          <small>{{ estacion.direccion }}</small>
+        </span>
+        <span class="bike-count" [class.empty]="estacion.disponibles === 0 || !estacion.activa">
+          <strong>{{ estacion.activa ? estacion.disponibles : '—' }}</strong>
+          <small>{{ estacion.activa ? 'disponibles' : 'cerrada' }}</small>
+        </span>
+      </button>
+        <p class="empty-state" *ngIf="!cargando && estacionesFiltradas.length === 0">
+          No encontramos estaciones con esos criterios. Probá con otra búsqueda.
+        </p>
+      </div>
+
+      <section *ngIf="estacionSeleccionada as estacion" class="station-detail">
+        <div class="detail-heading">
+          <div>
+            <p class="eyebrow">ESTACIÓN SELECCIONADA</p>
+            <h3>{{ estacion.nombre }}</h3>
+          </div>
+          <span class="status-badge" [class.offline]="!estacion.activa">
+            {{ estacion.activa ? 'Operativa' : 'No habilitada' }}
+          </span>
+        </div>
+        <p class="station-address">{{ estacion.direccion }}</p>
+        <div class="capacity-track" role="img" [attr.aria-label]="estacion.disponibles + ' bicicletas disponibles de ' + estacion.capacidad + ' espacios'">
+          <span [style.width.%]="estacion.capacidad ? (estacion.disponibles / estacion.capacidad) * 100 : 0"></span>
+        </div>
+        <p class="capacity-copy"><strong>{{ estacion.disponibles }}</strong> disponibles <span>·</span> {{ estacion.capacidad }} espacios</p>
+
+        <div class="bike-options">
+          <h4>Bicicletas disponibles</h4>
+          <p class="empty-state compact" *ngIf="bicicletasDisponibles.length === 0">Por ahora no hay bicicletas disponibles en esta estación.</p>
+          <ul *ngIf="bicicletasDisponibles.length > 0">
+            <li *ngFor="let bicicleta of bicicletasDisponibles">
+              <span class="bike-option-icon" aria-hidden="true">↗</span>
+              <span><strong>{{ bicicleta.codigo }}</strong><small>{{ bicicleta.modelo }}</small></span>
+            </li>
+          </ul>
+        </div>
+
+        <div *ngIf="esCliente && !viajeActivo && bicicletasDisponibles.length > 0" class="rental-form">
+          <label for="bicicleta">Elegí una bicicleta</label>
+          <select id="bicicleta" [(ngModel)]="bicicletaId">
+            <option value="">Seleccioná una bicicleta</option>
+            <option *ngFor="let bicicleta of bicicletasDisponibles" [value]="bicicleta.id">
+              {{ bicicleta.codigo }} — {{ bicicleta.modelo }}
+            </option>
+          </select>
+          <button type="button" class="primary-action" [disabled]="!bicicletaId" (click)="comenzarViaje()">Iniciar viaje <span aria-hidden="true">→</span></button>
+        </div>
+      </section>
+
+      <section *ngIf="esCliente && viajeActivo" class="active-trip">
+        <div class="trip-title">
+          <span class="live-dot" aria-hidden="true"></span>
+          <h3>Tu viaje está en curso</h3>
+        </div>
+        <p>Empezaste en <strong>{{ nombreEstacion(viajeActivo.estacion_origen_id) }}</strong></p>
+        <small>Inicio {{ viajeActivo.fecha_inicio | date:'short' }}</small>
+        <label for="destino">Elegí dónde devolverla</label>
+        <select id="destino" [(ngModel)]="estacionDestinoId">
+          <option value="">Seleccioná una estación habilitada</option>
+          <option *ngFor="let destino of estaciones" [value]="destino.id" [disabled]="!destino.activa">
+            {{ destino.nombre }}{{ destino.activa ? '' : ' (no habilitada)' }}
+          </option>
+        </select>
+        <button type="button" class="primary-action" [disabled]="!estacionDestinoId" (click)="devolverBicicleta()">Devolver bicicleta <span aria-hidden="true">→</span></button>
+        <a routerLink="/viajes" class="text-link">Ver historial de viajes</a>
+      </section>
+
+      <div *ngIf="!usuarioService.usuarioActual" class="sign-in-prompt">
+        <div class="prompt-icon" aria-hidden="true">↗</div>
+        <div><strong>¿Listo para salir?</strong><p><a routerLink="/login">Iniciá sesión</a> para alquilar una bicicleta.</p></div>
+      </div>
+    </aside>
+  </div>
 </main>

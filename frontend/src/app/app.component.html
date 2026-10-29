@@ -1,13 +1,33 @@
-<mat-toolbar color="primary">
-  <span>🚲 Bicicletas Compartidas</span>
-  <span class="spacer"></span>
-  <a mat-button routerLink="/mapa">Mapa</a>
-  <a mat-button routerLink="/viajes" *ngIf="usuarioService.usuarioActual?.role === 'cliente'">Mis viajes</a>
-  <a mat-button routerLink="/admin" *ngIf="usuarioService.usuarioActual?.role === 'admin'">Administración</a>
-  <a mat-button routerLink="/tecnico" *ngIf="usuarioService.usuarioActual?.role === 'tecnico'">Mantenimiento</a>
-  <a mat-button routerLink="/login" *ngIf="!usuarioService.usuarioActual">Ingresar</a>
-  <a mat-button routerLink="/registro" *ngIf="!usuarioService.usuarioActual">Registrarse</a>
-  <button mat-button *ngIf="usuarioService.usuarioActual" (click)="cerrarSesion()">Cerrar sesión</button>
-</mat-toolbar>
+<div class="app-shell">
+  <header class="app-header">
+    <a class="brand" routerLink="/mapa" aria-label="BiciCiudad, ir al mapa">
+      <span class="brand-mark" aria-hidden="true">🚲</span>
+      <span class="brand-copy">
+        <strong>BiciCiudad</strong>
+        <span>Movilidad compartida</span>
+      </span>
+    </a>
 
-<router-outlet />
+    <nav class="primary-nav" aria-label="Navegación principal">
+      <a routerLink="/mapa" routerLinkActive="active" ariaCurrentWhenActive="page">Mapa</a>
+      <a *ngIf="usuarioService.usuarioActual?.role === 'cliente'" routerLink="/viajes" routerLinkActive="active" ariaCurrentWhenActive="page">Mis viajes</a>
+      <a *ngIf="usuarioService.usuarioActual?.role === 'admin'" routerLink="/admin" routerLinkActive="active" ariaCurrentWhenActive="page">Administración</a>
+      <a *ngIf="usuarioService.usuarioActual?.role === 'tecnico'" routerLink="/tecnico" routerLinkActive="active" ariaCurrentWhenActive="page">Mantenimiento</a>
+    </nav>
+
+    <div class="header-actions">
+      <ng-container *ngIf="usuarioService.usuarioActual; else visitorActions">
+        <span class="user-role">{{ usuarioService.usuarioActual.role }}</span>
+        <button type="button" class="logout-button" (click)="cerrarSesion()">Cerrar sesión</button>
+      </ng-container>
+      <ng-template #visitorActions>
+        <a class="login-link" routerLink="/login">Ingresar</a>
+        <a class="register-link" routerLink="/registro">Crear cuenta</a>
+      </ng-template>
+    </div>
+  </header>
+
+  <div class="app-main">
+    <router-outlet />
+  </div>
+</div>

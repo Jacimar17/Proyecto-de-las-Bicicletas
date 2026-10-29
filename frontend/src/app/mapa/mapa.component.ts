@@ -13,8 +13,7 @@ import { RouterLink } from '@angular/router';
   selector: 'app-mapa',
   standalone: true,
   imports: [CommonModule, FormsModule, MatProgressSpinnerModule, RouterLink],
-  templateUrl: './mapa.component.html',
-  styleUrl: './mapa.component.css'
+  templateUrl: './mapa.component.html'
 })
 export class MapaComponent implements AfterViewInit, OnDestroy {
   cargando = true;
@@ -39,9 +38,30 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
     return this.estacionSeleccionada?.bicicletas.filter(bicicleta => bicicleta.estado === 'DISPONIBLE') ?? [];
   }
 
+  get estacionesActivas(): number {
+    return this.estaciones.filter(estacion => estacion.activa).length;
+  }
+
+  get bicicletasTotalesDisponibles(): number {
+    return this.estaciones.reduce((total, estacion) => total + (estacion.activa ? estacion.disponibles : 0), 0);
+  }
+
+  get estacionesFiltradas(): Estacion[] {
+    const consulta = this.busquedaEstacion.trim().toLocaleLowerCase();
+    return this.estaciones.filter(estacion => {
+      const coincideBusqueda = !consulta
+        || estacion.nombre.toLocaleLowerCase().includes(consulta)
+        || estacion.direccion.toLocaleLowerCase().includes(consulta);
+      return coincideBusqueda && (!this.soloDisponibles || (estacion.activa && estacion.disponibles > 0));
+    });
+  }
+
   get esCliente(): boolean {
     return this.usuarioService.usuarioActual?.role === 'cliente';
   }
+
+  busquedaEstacion = '';
+  soloDisponibles = false;
 
   nombreEstacion(id: string): string {
     return this.estaciones.find(estacion => estacion.id === id)?.nombre ?? id;
@@ -137,8 +157,8 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
 
   private agregarMarcador(estacion: Estacion): void {
     const icono = L.divIcon({
-      html: `<div style="background:${estacion.activa ? '#1976d2' : '#757575'};width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 0 4px rgba(0,0,0,.5);"></div>`,
-      className: '',
+      html: `<div style="background:${estacion.activa ? '#187653' : '#89958e'};width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(23,54,38,.3);"></div>`,
+      className: 'station-map-marker',
       iconSize: [24, 24],
       iconAnchor: [12, 12]
     });

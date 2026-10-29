@@ -1,5 +1,9 @@
 <main class="admin-container">
-  <h1>Administración del sistema</h1>
+  <header class="page-intro">
+    <p class="eyebrow">CENTRO DE CONTROL</p>
+    <h1>Administración</h1>
+    <p>Gestioná usuarios, bicicletas y estaciones desde un mismo lugar.</p>
+  </header>
 
   <nav class="tabs" aria-label="Secciones de administración">
     <button type="button" [class.active]="seccion === 'usuarios'" (click)="cambiarSeccion('usuarios')">Usuarios</button>

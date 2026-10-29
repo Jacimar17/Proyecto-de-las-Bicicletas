@@ -1,26 +1,47 @@
 .registro-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: calc(100vh - 64px);
+  min-height: min(760px, calc(100vh - 76px));
 }
 
-mat-card {
-  width: 380px;
-  padding: 16px;
+.registro-container .auth-card mat-card-header {
+  margin-bottom: 19px;
 }
 
-.full-width {
-  width: 100%;
-  margin-bottom: 12px;
+.registro-container .auth-card mat-card-title {
+  font-size: 24px;
 }
 
-.error {
-  color: red;
-  font-size: 14px;
+.registro-container .auth-card mat-form-field {
+  margin-bottom: 2px;
 }
 
-.centro {
-  text-align: center;
+.registro-container .auth-card mat-card-actions {
+  margin-top: 5px;
+}
+
+.registro-container .auth-card button[mat-raised-button] {
+  min-height: 46px;
+  border-radius: 11px;
+  background: var(--green);
+  color: white;
+  font-weight: 700;
+}
+
+.registro-container .error {
+  margin: 0 0 10px;
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.registro-container .centro {
+  margin: 18px 0 0;
   padding: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.registro-container .centro a {
+  color: var(--green-dark);
+  font-weight: 700;
+  text-decoration: none;
 }

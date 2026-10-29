@@ -1,18 +1,33 @@
 <main class="viajes-container">
-  <h1>Mis viajes</h1>
+  <header class="page-intro">
+    <p class="eyebrow">TU ACTIVIDAD</p>
+    <h1>Mis viajes</h1>
+    <p>Seguí tu recorrido actual y consultá tus viajes anteriores.</p>
+  </header>
   <p class="error" *ngIf="error" role="alert">{{ error }}</p>
   <p *ngIf="cargando">Cargando historial...</p>
 
-  <section class="activo" *ngIf="viajeActivo">
-    <h2>Viaje en curso</h2>
-    <p>Bicicleta: <strong>{{ codigoBicicleta(viajeActivo.bicicleta_id) }}</strong></p>
-    <p>Origen: {{ nombreEstacion(viajeActivo.estacion_origen_id) }}</p>
-    <p>Inicio: {{ viajeActivo.fecha_inicio | date:'medium' }}</p>
-    <p>Para devolverla en una estación habilitada, utiliza el mapa.</p>
-    <a routerLink="/mapa">Ir al mapa para devolver</a>
+  <section class="active-trip-card" *ngIf="viajeActivo">
+    <div class="trip-live-label"><span aria-hidden="true"></span> RECORRIDO ACTIVO</div>
+    <div class="active-trip-content">
+      <div>
+        <h2>Tu viaje está en marcha</h2>
+        <p>Estás pedaleando en la <strong>{{ codigoBicicleta(viajeActivo.bicicleta_id) }}</strong>.</p>
+      </div>
+      <a routerLink="/mapa">Devolver bicicleta <span aria-hidden="true">→</span></a>
+    </div>
+    <div class="active-trip-details">
+      <span><small>Estación de salida</small><strong>{{ nombreEstacion(viajeActivo.estacion_origen_id) }}</strong></span>
+      <span><small>Inicio</small><strong>{{ viajeActivo.fecha_inicio | date:'medium' }}</strong></span>
+    </div>
+    <p class="trip-hint">Elegí una estación habilitada en el mapa para finalizar tu viaje.</p>
   </section>
 
-  <h2>Historial de viajes</h2>
+  <section class="history-section">
+    <div class="section-heading">
+      <div><h2>Historial de viajes</h2><p>Todos tus recorridos, en un solo lugar.</p></div>
+      <span class="history-count">{{ historial.length }} viajes</span>
+    </div>
   <div class="tabla-wrap">
     <table>
       <thead><tr><th>Bicicleta</th><th>Origen</th><th>Destino</th><th>Inicio</th><th>Finalización</th><th>Estado</th></tr></thead>
@@ -23,17 +38,29 @@
           <td>{{ nombreEstacion(viaje.estacion_destino_id) }}</td>
           <td>{{ viaje.fecha_inicio | date:'medium' }}</td>
           <td>{{ viaje.fecha_fin ? (viaje.fecha_fin | date:'medium') : '—' }}</td>
-          <td>{{ viaje.fecha_fin ? 'Finalizado' : 'En curso' }}</td>
+          <td><span class="status-pill" [class.in-progress]="!viaje.fecha_fin">{{ viaje.fecha_fin ? 'Finalizado' : 'En curso' }}</span></td>
         </tr>
         <tr *ngIf="!cargando && historial.length === 0"><td colspan="6">Todavía no tienes viajes registrados.</td></tr>
       </tbody>
     </table>
   </div>
+  </section>
 
-  <h2>Estaciones</h2>
-  <ul>
-    <li *ngFor="let estacion of estaciones">
-      {{ estacion.nombre }} — {{ estacion.activa ? (estacion.disponibles + ' bicicletas disponibles') : 'No habilitada' }}
-    </li>
-  </ul>
+  <section class="stations-section">
+    <div class="section-heading">
+      <div><h2>Estaciones cercanas</h2><p>Disponibilidad actual de la red.</p></div>
+      <a routerLink="/mapa">Ver mapa <span aria-hidden="true">→</span></a>
+    </div>
+    <div class="station-summary-grid">
+      <article class="station-summary" *ngFor="let estacion of estaciones">
+        <span class="station-summary-icon" aria-hidden="true">⌖</span>
+        <span class="station-summary-info">
+          <strong>{{ estacion.nombre }}</strong>
+          <small>{{ estacion.activa ? (estacion.disponibles + ' bicicletas disponibles') : 'No habilitada' }}</small>
+        </span>
+        <span class="status-pill" [class.unavailable]="!estacion.activa">{{ estacion.activa ? 'Activa' : 'Cerrada' }}</span>
+      </article>
+      <p class="empty-stations" *ngIf="estaciones.length === 0">Todavía no hay estaciones para mostrar.</p>
+    </div>
+  </section>
 </main>

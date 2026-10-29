@@ -17,10 +17,11 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render title', async () => {
+  it('should render the shared navigation', async () => {
     const fixture = TestBed.createComponent(AppComponent);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('mat-toolbar')?.textContent).toContain('Bicicletas Compartidas');
+    expect(compiled.querySelector('.brand')?.textContent).toContain('BiciCiudad');
+    expect(compiled.querySelector('.primary-nav a')?.textContent).toContain('Mapa');
   });
 });

@@ -1,16 +1,24 @@
 <main class="tecnico-container">
-  <h1>Gestión de mantenimiento</h1>
-  <p>Selecciona una bicicleta por su código o ID para actualizar su estado.</p>
+  <header class="page-intro">
+    <p class="eyebrow">OPERACIONES DE FLOTA</p>
+    <h1>Gestión de mantenimiento</h1>
+    <p>Revisá el estado de cada bicicleta y registrá los cambios de mantenimiento.</p>
+  </header>
   <p class="error" *ngIf="error" role="alert">{{ error }}</p>
   <p class="success" *ngIf="mensaje" role="status">{{ mensaje }}</p>
 
+  <section class="fleet-section">
+    <div class="section-heading">
+      <div><h2>Estado de la flota</h2><p>Seleccioná una acción para actualizar una bicicleta.</p></div>
+      <span class="fleet-count">{{ bicicletas.length }} bicicletas</span>
+    </div>
   <div class="tabla-wrap">
     <table>
       <thead><tr><th>ID</th><th>Código</th><th>Modelo</th><th>Ubicación</th><th>Estado</th><th>Última actualización</th><th>Acciones</th></tr></thead>
       <tbody>
         <tr *ngFor="let bicicleta of bicicletas">
           <td>{{ bicicleta.id }}</td><td>{{ bicicleta.codigo }}</td><td>{{ bicicleta.modelo }}</td><td>{{ bicicleta.ubicacion }}</td>
-          <td>{{ bicicleta.estado }}</td>
+          <td><span class="status-pill" [class.maintenance-state]="bicicleta.estado === 'EN_MANTENIMIENTO'">{{ bicicleta.estado }}</span></td>
           <td>{{ bicicleta.fecha_ultima_revision ? (bicicleta.fecha_ultima_revision | date:'short') : '—' }}</td>
           <td class="acciones">
             <button type="button" [disabled]="bicicleta.estado === 'DISPONIBLE'" (click)="actualizar(bicicleta, 'DISPONIBLE')">Marcar disponible</button>
@@ -21,8 +29,12 @@
       </tbody>
     </table>
   </div>
+  </section>
 
-  <h2>Registro de mantenimiento</h2>
+  <section class="maintenance-history">
+  <div class="section-heading">
+    <div><h2>Registro de mantenimiento</h2><p>Historial de actualizaciones y responsables.</p></div>
+  </div>
   <div class="tabla-wrap">
     <table>
       <thead><tr><th>Bicicleta</th><th>Cambio de estado</th><th>Fecha</th><th>Técnico responsable</th></tr></thead>
@@ -37,4 +49,5 @@
       </tbody>
     </table>
   </div>
+  </section>
 </main>
