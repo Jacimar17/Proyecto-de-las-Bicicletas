@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewChecked, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import * as L from 'leaflet';
 import { Bicicleta, BicicletaService } from '../shared/services/bicicleta.service';
 import { Estacion, EstacionService } from '../shared/services/estacion.service';
 import { RolUsuario, Usuario, UsuarioService } from '../shared/services/usuario.service';
@@ -14,7 +15,7 @@ type SeccionAdmin = 'usuarios' | 'bicicletas' | 'estaciones';
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
-export class AdminComponent implements OnInit {
+export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   seccion: SeccionAdmin = 'bicicletas';
   usuarios: Usuario[] = [];
   bicicletas: Bicicleta[] = [];
@@ -40,6 +41,9 @@ export class AdminComponent implements OnInit {
     'DISPONIBLE', 'RESERVADA', 'EN_USO', 'EN_MANTENIMIENTO', 'APTA', 'NO_APTA'
   ];
 
+  private mapaEstacion: L.Map | null = null;
+  private marcadorEstacion: L.Marker | null = null;
+
   constructor(
     private readonly bicicletaService: BicicletaService,
     private readonly estacionService: EstacionService,
@@ -50,6 +54,14 @@ export class AdminComponent implements OnInit {
     this.cargarTodo();
   }
 
+  ngAfterViewChecked(): void {
+    if (this.seccion === 'estaciones') this.inicializarMapaEstacion();
+  }
+
+  ngOnDestroy(): void {
+    this.destruirMapaEstacion();
+  }
+
   cargarTodo(): void {
     this.cargarUsuarios();
     this.cargarBicicletas();
@@ -57,6 +69,9 @@ export class AdminComponent implements OnInit {
   }
 
   cambiarSeccion(seccion: SeccionAdmin): void {
+    if (this.seccion === 'estaciones' && seccion !== 'estaciones') {
+      this.destruirMapaEstacion();
+    }
     this.limpiarFormulario();
     this.seccion = seccion;
   }
@@ -106,6 +121,7 @@ export class AdminComponent implements OnInit {
       capacidad: estacion.capacidad,
       activa: estacion.activa
     };
+    this.actualizarMarcadorEstacion(true);
   }
 
   eliminarEstacion(estacion: Estacion): void {
@@ -127,8 +143,23 @@ export class AdminComponent implements OnInit {
       nombre: '', barrio: '', direccion: '', lat: -33.7456, lng: -61.9688,
       capacidad: 10, activa: true
     };
+    this.actualizarMarcadorEstacion(true);
     this.error = '';
     this.mensaje = '';
+  }
+
+  seleccionarCoordenadas(lat: number, lng: number): void {
+    if (!this.coordenadasValidas(lat, lng)) return;
+    this.estacionForm.lat = lat;
+    this.estacionForm.lng = lng;
+    this.marcadorEstacion?.setLatLng([lat, lng]);
+  }
+
+  actualizarMarcadorEstacion(centrar = false): void {
+    const { lat, lng } = this.estacionForm;
+    if (!this.coordenadasValidas(lat, lng)) return;
+    this.marcadorEstacion?.setLatLng([lat, lng]);
+    if (centrar) this.mapaEstacion?.setView([lat, lng]);
   }
 
   private guardarUsuario(): void {
@@ -184,6 +215,45 @@ export class AdminComponent implements OnInit {
       next: data => this.estaciones = data,
       error: error => this.mostrarError(error)
     });
+  }
+
+  private inicializarMapaEstacion(): void {
+    const contenedor = document.getElementById('estacion-mapa');
+    if (!contenedor || this.mapaEstacion) return;
+
+    this.mapaEstacion = L.map(contenedor).setView(
+      [this.estacionForm.lat, this.estacionForm.lng],
+      13
+    );
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.mapaEstacion);
+
+    this.marcadorEstacion = L.marker(
+      [this.estacionForm.lat, this.estacionForm.lng],
+      {
+        icon: L.divIcon({
+          html: '<div style="width:18px;height:18px;background:#c62828;border:3px solid white;border-radius:50%;box-shadow:0 0 4px rgba(0,0,0,.5);"></div>',
+          className: '',
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        })
+      }
+    ).addTo(this.mapaEstacion);
+    this.mapaEstacion.on('click', event => {
+      this.seleccionarCoordenadas(event.latlng.lat, event.latlng.lng);
+    });
+  }
+
+  private destruirMapaEstacion(): void {
+    this.mapaEstacion?.remove();
+    this.mapaEstacion = null;
+    this.marcadorEstacion = null;
+  }
+
+  private coordenadasValidas(lat: number, lng: number): boolean {
+    return Number.isFinite(lat) && lat >= -90 && lat <= 90
+      && Number.isFinite(lng) && lng >= -180 && lng <= 180;
   }
 
   private mostrarError(error: { error?: { message?: string } }): void {

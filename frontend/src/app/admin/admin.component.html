@@ -87,8 +87,12 @@
       <label>Nombre<input name="nombre" [(ngModel)]="estacionForm.nombre" required /></label>
       <label>Barrio<input name="barrio" [(ngModel)]="estacionForm.barrio" required /></label>
       <label>Dirección<input name="direccion" [(ngModel)]="estacionForm.direccion" required /></label>
-      <label>Latitud<input name="lat" type="number" step="any" [(ngModel)]="estacionForm.lat" required /></label>
-      <label>Longitud<input name="lng" type="number" step="any" [(ngModel)]="estacionForm.lng" required /></label>
+      <div class="mapa-selector">
+        <p>Haz clic en el mapa para elegir la ubicación. También puedes ingresar las coordenadas manualmente.</p>
+        <div id="estacion-mapa" aria-label="Mapa para seleccionar la ubicación de la estación"></div>
+      </div>
+      <label>Latitud<input name="lat" type="number" min="-90" max="90" step="any" [(ngModel)]="estacionForm.lat" (ngModelChange)="actualizarMarcadorEstacion()" required /></label>
+      <label>Longitud<input name="lng" type="number" min="-180" max="180" step="any" [(ngModel)]="estacionForm.lng" (ngModelChange)="actualizarMarcadorEstacion()" required /></label>
       <label>Capacidad<input name="capacidad" type="number" min="1" step="1" [(ngModel)]="estacionForm.capacidad" required /></label>
       <label class="checkbox"><input type="checkbox" name="activa" [(ngModel)]="estacionForm.activa" /> Habilitada</label>
       <div class="acciones">

@@ -10,6 +10,6 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["menu.ts", "server.ts", "src/**/*.ts", "tests/**/*.ts", "test/**/*.ts"],
+  "include": ["server.ts", "src/**/*.ts", "tests/**/*.ts", "test/**/*.ts"],
   "exclude": ["node_modules", "frontend", "dist"]
 }

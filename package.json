@@ -6,7 +6,7 @@
     "test": "node -r ts-node/register --test tests/*.test.ts test/*.test.ts",
     "start": "node -r ts-node/register server.ts",
     "dev": "nodemon --exec \"node -r ts-node/register\" server.ts",
-    "menu": "node -r ts-node/register menu.ts",
+    "menu": "node -r ts-node/register src/cli/index.ts",
     "seed": "node -r ts-node/register src/seed.ts",
     "build": "tsc --noEmit"
   },

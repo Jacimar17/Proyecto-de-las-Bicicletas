@@ -14,6 +14,7 @@ LOCAL_MONGO_URI=mongodb://127.0.0.1:27017
 # ATLAS_URI=mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
 JWT_SECRET=<secreto privado para firmar tokens>
 PORT=3000
+API_BASE_URL=http://localhost:3000
 ```
 
 La API carga `.env` automáticamente al ejecutar `npm start`. `MONGO_MODE` puede ser `local` o `atlas` y, si se omite, usa `local`.
@@ -37,6 +38,8 @@ Instala las dependencias raíz con `npm install` y las del frontend desde `front
 - Desde `frontend/`: `npm start` inicia Angular; `npm test -- --watch=false` ejecuta sus pruebas.
 
 El seed usa MongoDB URI desde `.env`, crea estaciones con coordenadas y evita duplicar bicicletas mediante sus códigos existentes.
+
+El menú de consola está organizado en `src/cli/` y se inicia con `npm run menu`. Usa `API_BASE_URL` para conectarse a la API; si no se configura, utiliza `http://localhost:3000`.
 
 ## Roles e historias
 

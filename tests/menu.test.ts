@@ -5,7 +5,7 @@ import { test } from "node:test";
 test("TypeScript CLI menu starts and exits through its menu option", () => {
   const result = spawnSync(
     process.execPath,
-    ["-r", "ts-node/register", "menu.ts"],
+    ["-r", "ts-node/register", "src/cli/index.ts"],
     {
       cwd: process.cwd(),
       encoding: "utf8",

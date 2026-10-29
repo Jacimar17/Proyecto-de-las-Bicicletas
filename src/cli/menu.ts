@@ -1,95 +1,19 @@
-import * as readline from "node:readline";
-
-const API_URL = "http://localhost:3000";
-
-interface Bicycle {
-  _id?: string;
-  code: string;
-  currentStation: string;
-  status: string;
-  unlockCode: string;
-  rentedBy?: string | null;
-}
-
-interface User {
-  _id?: string;
-  name: string;
-  lastName?: string;
-  email: string;
-  role?: string;
-  puntuacion?: number;
-  suspendidoHasta?: string | null;
-  bloqueado?: boolean;
-}
-
-interface SessionUser extends User {
-  token: string;
-  role: string;
-}
-
-interface ApiData {
-  ok?: boolean;
-  mensaje?: string;
-  message?: string;
-  error?: string;
-  token?: string;
-  user?: User;
-  users?: User[];
-  total?: number;
-  data?: unknown;
-  puntuacion?: number;
-  suspendidoHasta?: string | null;
-  bloqueado?: boolean;
-}
-
-interface Station {
-  id: string;
-  nombre: string;
-  barrio: string;
-  direccion: string;
-  activa: boolean;
-  disponibles?: number;
-  bicicletas?: StationBicycle[];
-}
-
-interface StationBicycle {
-  id: string;
-  codigo: string;
-  modelo: string;
-  estado: string;
-  estacion_id: string | null;
-}
-
-interface Trip {
-  id: string;
-  usuarioId: string;
-  bicicletaId: string;
-  estacionOrigenId: string;
-  estacionDestinoId: string | null;
-  fechaInicio: string;
-  fechaFin: string | null;
-}
-
-interface ApiResult {
-  status: number;
-  data: ApiData;
-}
-
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
+import { ApiClient } from "./api-client";
+import { ask, closePrompt } from "./terminal";
+import type {
+  ApiData,
+  Bicycle,
+  SessionUser,
+  Station,
+  Trip,
+  User,
+} from './types';
 
 // Variable global para guardar el usuario logueado (token y email)
 let currentUser: SessionUser | null = null;
+const apiClient = new ApiClient(() => currentUser?.token ?? null);
 
 // ---------- Utilidades ----------
-function ask(question: string): Promise<string> {
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => resolve(answer.trim()));
-  });
-}
-
 function print(obj: unknown): void {
   console.log(JSON.stringify(obj, null, 2));
 }
@@ -100,34 +24,13 @@ function getBicycles(data: ApiData): Bicycle[] {
 }
 
 // ---------- Llamadas a la API ----------
-async function apiFetch(
+function apiFetch(
   path: string,
   method = "GET",
   body: Record<string, unknown> | null = null,
   extraHeaders: Record<string, string> = {}
-): Promise<ApiResult> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...extraHeaders,
-  };
-
-  if (currentUser && currentUser.token) {
-    headers["Authorization"] = `Bearer ${currentUser.token}`;
-  }
-
-  const options: RequestInit = { method, headers };
-
-  if (body) {
-    options.body = JSON.stringify(body);
-  }
-
-  try {
-    const res = await fetch(`${API_URL}${path}`, options);
-    const data = (await res.json()) as ApiData;
-    return { status: res.status, data };
-  } catch (error) {
-    return { status: 0, data: { error: "No se pudo conectar con el servidor. ¿Está corriendo `npm start`?" } };
-  }
+): ReturnType<ApiClient['request']> {
+  return apiClient.request(path, method, body, extraHeaders);
 }
 
 function translateStatus(status: string): string {
@@ -787,40 +690,38 @@ async function viewProfile() {
 }
 
 // ---------- MENÚ PRINCIPAL ----------
-async function mainMenu() {
-  let running = true;
+export async function runMenu(): Promise<void> {
+  try {
+    let running = true;
 
-  while (running) {
-    console.log("\n========= SISTEMA DE ALQUILER DE BICICLETAS =========");
-    console.log("1. Iniciar sesión");
-    console.log("2. Registrar nuevo usuario");
-    console.log("3. Salir");
-    const opt = await ask("\nSelecciona una opción: ");
+    while (running) {
+      console.log("\n========= SISTEMA DE ALQUILER DE BICICLETAS =========");
+      console.log("1. Iniciar sesión");
+      console.log("2. Registrar nuevo usuario");
+      console.log("3. Salir");
+      const opt = await ask("\nSelecciona una opción: ");
 
-    switch (opt) {
-      case "1":
-        const ok = await doLogin();
-        if (ok) {
-          const next = isAdmin() ? await adminMenu() : await clientMenu();
-          if (next === "exit") running = false;
+      switch (opt) {
+        case "1": {
+          const ok = await doLogin();
+          if (ok) {
+            const next = isAdmin() ? await adminMenu() : await clientMenu();
+            if (next === "exit") running = false;
+          }
+          break;
         }
-        break;
-      case "2":
-        await registerUser();
-        break;
-      case "3":
-        console.log("\n¡Hasta luego!\n");
-        running = false;
-        break;
-      default:
-        console.log("Opción no válida.");
+        case "2":
+          await registerUser();
+          break;
+        case "3":
+          console.log("\n¡Hasta luego!\n");
+          running = false;
+          break;
+        default:
+          console.log("Opción no válida.");
+      }
     }
+  } finally {
+    closePrompt();
   }
-
-  rl.close();
-  process.exit(0);
 }
-
-console.log("Conectando a la API en: " + API_URL);
-console.log("Asegúrate de que el servidor esté corriendo con `npm start`.\n");
-mainMenu();

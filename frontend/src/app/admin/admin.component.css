@@ -76,6 +76,21 @@ select {
   grid-column: 1 / -1;
 }
 
+.mapa-selector {
+  grid-column: 1 / -1;
+}
+
+.mapa-selector p {
+  margin: 0 0 8px;
+}
+
+#estacion-mapa {
+  width: 100%;
+  height: 320px;
+  border: 1px solid #aebbc7;
+  border-radius: 6px;
+}
+
 .secondary {
   background: #607d8b;
 }
