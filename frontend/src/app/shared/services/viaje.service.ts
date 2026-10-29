@@ -12,6 +12,11 @@ export interface Viaje {
   fecha_fin: string | null;
 }
 
+export interface CodigoDesbloqueo {
+  codigo: string;
+  expira_en: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ViajeService {
   private readonly api = 'http://localhost:3000/api/viajes';
@@ -28,6 +33,12 @@ export class ViajeService {
 
   getActive(): Observable<Viaje | null> {
     return this.http.get<Viaje | null>(`${this.api}/activo`);
+  }
+
+  generateUnlockCode(bicicletaId: string): Observable<CodigoDesbloqueo> {
+    return this.http.post<CodigoDesbloqueo>(`${this.api}/codigo-desbloqueo`, {
+      bicicleta_id: bicicletaId
+    });
   }
 
   start(bicicletaId: string, estacionOrigenId: string, codigoDesbloqueo: string): Observable<Viaje> {

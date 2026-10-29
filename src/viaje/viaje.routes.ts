@@ -10,6 +10,7 @@ export class ViajeRoutes {
         this.router.get('/viajes', verificarToken, requerirRol('cliente'), controller.getHistory);
         this.router.get('/viajes/todos', verificarToken, requerirRol('admin'), controller.getAll);
         this.router.get('/viajes/activo', verificarToken, requerirRol('cliente'), controller.getActive);
+        this.router.post('/viajes/codigo-desbloqueo', verificarToken, requerirRol('cliente'), controller.generateUnlockCode);
         this.router.post('/viajes', verificarToken, requerirRol('cliente'), controller.start);
         this.router.patch('/viajes/activo/finalizar', verificarToken, requerirRol('cliente'), controller.finish);
         this.router.patch('/viajes/:id/devolver', verificarToken, requerirRol('cliente'), controller.finishLegacy);

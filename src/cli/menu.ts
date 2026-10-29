@@ -254,7 +254,15 @@ async function clientStartTrip(): Promise<void> {
     console.log("\nViaje cancelado.\n");
     return;
   }
-  const unlockCode = await ask("Código de desbloqueo de la bicicleta: ");
+  const generatedCode = await apiFetch("/api/viajes/codigo-desbloqueo", "POST", {
+    bicicletaId: bicycle.id,
+  });
+  if (generatedCode.status !== 201 || !generatedCode.data.codigo) {
+    print(generatedCode.data);
+    return;
+  }
+  console.log(`\nCódigo de desbloqueo (vence ${new Date(generatedCode.data.expira_en || "").toLocaleTimeString()}): ${generatedCode.data.codigo}`);
+  const unlockCode = await ask("Ingresá el código generado: ");
   const { status, data } = await apiFetch("/api/viajes", "POST", { bicicletaId: bicycle.id, codigoDesbloqueo: unlockCode });
   if (status === 201) {
     const trip = data.data as Trip;

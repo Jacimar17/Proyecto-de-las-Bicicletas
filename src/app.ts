@@ -20,6 +20,7 @@ import { UsuarioRepositoryMongo } from './usuario/usuario.repository.mongo';
 import { UsuarioRoutes } from './usuario/usuario.routes';
 import { UsuarioService } from './usuario/usuario.service';
 import { ViajeController } from './viaje/viaje.controller';
+import { CodigoDesbloqueoRepositoryMongo } from './viaje/codigo-desbloqueo.repository.mongo';
 import { ViajeRepositoryMongo } from './viaje/viaje.repository.mongo';
 import { ViajeRoutes } from './viaje/viaje.routes';
 import { ViajeService } from './viaje/viaje.service';
@@ -50,13 +51,15 @@ export function createApp(db: Db, sync?: SyncService): Express {
   const usuarioRoutes = new UsuarioRoutes(usuarioController);
 
   const viajeRepository = new ViajeRepositoryMongo(db);
+  const codigoDesbloqueoRepository = new CodigoDesbloqueoRepositoryMongo(db);
   const userRepository = new UserRepositoryMongo(db);
   const viajeService = new ViajeService(
     viajeRepository,
     bicicletaRepository,
     estacionRepository,
     usuarioRepository,
-    userRepository
+    userRepository,
+    codigoDesbloqueoRepository
   );
   const viajeController = new ViajeController(viajeService);
   const viajeRoutes = new ViajeRoutes(viajeController);
@@ -100,6 +103,7 @@ export function createApp(db: Db, sync?: SyncService): Express {
 export async function ensureApplicationIndexes(db: Db): Promise<void> {
   await Promise.all([
     new UsuarioRepositoryMongo(db).ensureIndexes(),
-    new ViajeRepositoryMongo(db).ensureIndexes()
+    new ViajeRepositoryMongo(db).ensureIndexes(),
+    new CodigoDesbloqueoRepositoryMongo(db).ensureIndexes()
   ]);
 }

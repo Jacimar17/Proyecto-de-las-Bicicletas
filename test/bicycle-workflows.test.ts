@@ -11,6 +11,8 @@ import { MantenimientoService } from '../src/mantenimiento/mantenimiento.service
 import { Viaje } from '../src/viaje/viaje.entity';
 import { ViajeRepository } from '../src/viaje/viaje.repository.interface';
 import { ViajeService } from '../src/viaje/viaje.service';
+import { CodigoDesbloqueoRepository } from '../src/viaje/codigo-desbloqueo.repository.interface';
+import { CodigoDesbloqueo } from '../src/viaje/codigo-desbloqueo.entity';
 import { User } from '../src/users/user.entity';
 import { UserRepository } from '../src/users/user.repository.interface';
 import { Usuario } from '../src/usuario/usuario.entity';
@@ -91,6 +93,31 @@ function makeTripRepository(): ViajeRepository {
     };
 }
 
+function makeUnlockCodeRepository(): CodigoDesbloqueoRepository {
+    let activeCode: CodigoDesbloqueo | null = null;
+    return {
+        ensureIndexes: async () => undefined,
+        issue: async code => {
+            activeCode = { ...code, id: 'unlock-code-1', intentos: 0 };
+        },
+        findActive: async (userId, bicycleId, now) =>
+            activeCode?.usuario_id === userId && activeCode.bicicleta_id === bicycleId &&
+            activeCode.expira_en > now ? activeCode : null,
+        recordFailedAttempt: async id => {
+            if (activeCode?.id === id) activeCode.intentos += 1;
+        },
+        consume: async (id, userId, bicycleId, hash, now) => {
+            if (
+                activeCode?.id !== id || activeCode.usuario_id !== userId ||
+                activeCode.bicicleta_id !== bicycleId || activeCode.codigo_hash !== hash ||
+                activeCode.expira_en <= now
+            ) return false;
+            activeCode = null;
+            return true;
+        }
+    };
+}
+
 function makeAccountRepositories(): { users: UserRepository; usuarios: UsuarioRepository } {
     const user: User = {
         id: 'user-1', name: 'Cliente', lastName: '', email: 'cliente@example.com',
@@ -137,9 +164,12 @@ test('el cliente inicia y devuelve un viaje en otra estación, con estado e hist
     const bicycles = makeBikeRepository();
     const trips = makeTripRepository();
     const accounts = makeAccountRepositories();
-    const service = new ViajeService(trips, bicycles, makeStationRepository(), accounts.usuarios, accounts.users);
+    const service = new ViajeService(
+        trips, bicycles, makeStationRepository(), accounts.usuarios, accounts.users, makeUnlockCodeRepository()
+    );
 
-    const active = await service.start('user-1', 'bike-1', stationA.id!, undefined, 'BICI-001');
+    const { codigo } = await service.generateUnlockCode('user-1', 'bike-1');
+    const active = await service.start('user-1', 'bike-1', stationA.id!, undefined, codigo);
     assert.equal(active.estacion_origen_id, stationA.id);
     assert.ok(active.fecha_inicio instanceof Date);
     assert.equal((await bicycles.findById('bike-1'))?.estado, 'EN_USO');
@@ -161,11 +191,12 @@ test('rechaza alquilar bicicletas en mantenimiento', async () => {
         makeBikeRepository('EN_MANTENIMIENTO'),
         makeStationRepository(),
         accounts.usuarios,
-        accounts.users
+        accounts.users,
+        makeUnlockCodeRepository()
     );
 
     await assert.rejects(
-        service.start('user-1', 'bike-1', stationA.id!, undefined, 'BICI-001'),
+        service.generateUnlockCode('user-1', 'bike-1'),
         (error: unknown) => error instanceof ApiError && error.status === 409
     );
 });

@@ -4,5 +4,6 @@ export const COLLECTIONS = {
   bicycles: "bicycles",
   stations: "stations",
   trips: "trips",
+  unlockCodes: "unlock_codes",
   maintenances: "maintenances",
 } as const;

@@ -1,8 +1,10 @@
+import { createHash, randomInt, timingSafeEqual } from 'node:crypto';
 import { ApiError } from '../common/api-error';
 import { BicicletaRepository } from '../bicycles/bicicleta.repository.interface';
 import { EstacionRepository } from '../estacion/estacion.repository.interface';
 import { UserRepository } from '../users/user.repository.interface';
 import { UsuarioRepository } from '../usuario/usuario.repository.interface';
+import { CodigoDesbloqueoRepository } from './codigo-desbloqueo.repository.interface';
 import { Viaje } from './viaje.entity';
 import { ViajeRepository } from './viaje.repository.interface';
 
@@ -10,6 +12,8 @@ const MAX_SCORE = 10;
 const MIN_SCORE = 1;
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const UNLOCK_CODE_TTL_MS = 5 * 60 * 1000;
+const MAX_UNLOCK_CODE_ATTEMPTS = 5;
 
 type AccountCollection = 'users' | 'usuarios';
 type AccountSnapshot = {
@@ -25,7 +29,8 @@ export class ViajeService {
         private readonly bicicletaRepository: BicicletaRepository,
         private readonly estacionRepository: EstacionRepository,
         private readonly usuarioRepository: UsuarioRepository,
-        private readonly userRepository: UserRepository
+        private readonly userRepository: UserRepository,
+        private readonly codigoDesbloqueoRepository: CodigoDesbloqueoRepository
     ) {}
 
     async getHistory(usuarioId: string): Promise<Viaje[]> {
@@ -38,6 +43,34 @@ export class ViajeService {
 
     async getActive(usuarioId: string): Promise<Viaje | null> {
         return this.repository.findActiveByUser(usuarioId);
+    }
+
+    async generateUnlockCode(
+        usuarioId: string,
+        bicicletaId: string,
+        accountCollection?: AccountCollection
+    ): Promise<{ codigo: string; expira_en: Date }> {
+        if (typeof bicicletaId !== 'string' || !bicicletaId.trim()) {
+            throw new ApiError('La bicicleta es obligatoria', 400);
+        }
+        await this.assertCanStart(usuarioId, accountCollection);
+        const bicicleta = await this.bicicletaRepository.findById(bicicletaId);
+        if (!bicicleta) throw new ApiError('Bicicleta no encontrada', 404);
+        if (bicicleta.estado !== 'DISPONIBLE') throw new ApiError('La bicicleta ya no está disponible', 409);
+        if (!bicicleta.estacion_id?.trim()) throw new ApiError('La bicicleta no está en una estación', 400);
+        const estacion = await this.estacionRepository.findById(bicicleta.estacion_id);
+        if (!estacion) throw new ApiError('Estación no encontrada', 404);
+        if (!estacion.activa) throw new ApiError('La estación no está habilitada', 400);
+
+        const codigo = randomInt(10_000_000, 100_000_000).toString();
+        const expiraEn = new Date(Date.now() + UNLOCK_CODE_TTL_MS);
+        await this.codigoDesbloqueoRepository.issue({
+            usuario_id: usuarioId,
+            bicicleta_id: bicicletaId,
+            codigo_hash: this.hashUnlockCode(codigo),
+            expira_en: expiraEn
+        });
+        return { codigo, expira_en: expiraEn };
     }
 
     async start(
@@ -53,15 +86,7 @@ export class ViajeService {
         if (typeof unlockCode !== 'string' || !unlockCode.trim()) {
             throw new ApiError('El código de desbloqueo es obligatorio', 400);
         }
-        const account = await this.findAccount(usuarioId, accountCollection);
-        if (!account) throw new ApiError('Usuario no encontrado', 404);
-        if (account.bloqueado) throw new ApiError('La cuenta está bloqueada', 403);
-        if (account.suspendidoHasta && account.suspendidoHasta.getTime() > Date.now()) {
-            throw new ApiError('La cuenta está suspendida', 403);
-        }
-        if (await this.repository.findActiveByUser(usuarioId)) {
-            throw new ApiError('Ya tienes un viaje en curso', 409);
-        }
+        await this.assertCanStart(usuarioId, accountCollection);
 
         const bicicleta = await this.bicicletaRepository.findById(bicicletaId);
         if (!bicicleta) throw new ApiError('Bicicleta no encontrada', 404);
@@ -74,9 +99,22 @@ export class ViajeService {
             throw new ApiError('La bicicleta no pertenece a la estación seleccionada', 400);
         }
 
-        const expectedCode = (bicicleta.unlockCode ?? bicicleta.codigo).trim();
-        if (unlockCode.trim() !== expectedCode) {
+        const codigoActivo = await this.codigoDesbloqueoRepository.findActive(usuarioId, bicicletaId, new Date());
+        const submittedHash = this.hashUnlockCode(unlockCode.trim());
+        if (!codigoActivo?.id || !this.hashesMatch(submittedHash, codigoActivo.codigo_hash)) {
+            if (codigoActivo?.id) {
+                await this.codigoDesbloqueoRepository.recordFailedAttempt(codigoActivo.id, MAX_UNLOCK_CODE_ATTEMPTS);
+            }
             throw new ApiError('El código de desbloqueo no es correcto', 403);
+        }
+        if (!(await this.codigoDesbloqueoRepository.consume(
+            codigoActivo.id,
+            usuarioId,
+            bicicletaId,
+            submittedHash,
+            new Date()
+        ))) {
+            throw new ApiError('El código de desbloqueo no es correcto o ya fue utilizado', 403);
         }
 
         const actualizada = await this.bicicletaRepository.updateIfEstado(
@@ -224,5 +262,27 @@ export class ViajeService {
             bloqueado: account.bloqueado ?? false,
             update: async (data) => Boolean(await this.usuarioRepository.update(id, data))
         };
+    }
+
+    private async assertCanStart(usuarioId: string, accountCollection?: AccountCollection): Promise<void> {
+        const account = await this.findAccount(usuarioId, accountCollection);
+        if (!account) throw new ApiError('Usuario no encontrado', 404);
+        if (account.bloqueado) throw new ApiError('La cuenta está bloqueada', 403);
+        if (account.suspendidoHasta && account.suspendidoHasta.getTime() > Date.now()) {
+            throw new ApiError('La cuenta está suspendida', 403);
+        }
+        if (await this.repository.findActiveByUser(usuarioId)) {
+            throw new ApiError('Ya tienes un viaje en curso', 409);
+        }
+    }
+
+    private hashUnlockCode(code: string): string {
+        return createHash('sha256').update(code).digest('hex');
+    }
+
+    private hashesMatch(submittedHash: string, storedHash: string): boolean {
+        const submitted = Buffer.from(submittedHash, 'hex');
+        const stored = Buffer.from(storedHash, 'hex');
+        return submitted.length === stored.length && timingSafeEqual(submitted, stored);
     }
 }

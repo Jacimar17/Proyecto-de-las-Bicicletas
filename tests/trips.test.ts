@@ -8,6 +8,26 @@ import { createApp } from "../src/app";
 
 const servers: Server[] = [];
 
+function matches(document: Record<string, unknown>, filter: Record<string, unknown>): boolean {
+  return Object.entries(filter).every(([key, value]) => {
+    const actual = document[key];
+    if (key === "_id" && value instanceof ObjectId) {
+      return (actual as ObjectId | undefined)?.equals(value) ?? false;
+    }
+    if (typeof value === "object" && value !== null && !(value instanceof Date)) {
+      return Object.entries(value).every(([operator, expected]) => {
+        const left = actual instanceof Date ? actual.getTime() : actual;
+        const right = expected instanceof Date ? expected.getTime() : expected;
+        if (operator === "$gt") return (left as number) > (right as number);
+        if (operator === "$lt") return (left as number) < (right as number);
+        if (operator === "$gte") return (left as number) >= (right as number);
+        return false;
+      });
+    }
+    return actual === value;
+  });
+}
+
 function createFakeDb() {
   const collections = new Map<string, Record<string, unknown>[]>();
   return {
@@ -19,20 +39,12 @@ function createFakeDb() {
           const query = {
             sort: () => query,
             toArray: async () =>
-              documents.filter((document) =>
-                Object.entries(filter).every(([key, value]) => document[key] === value)
-              ),
+              documents.filter((document) => matches(document, filter)),
           };
           return query;
         },
         findOne: async (filter: Record<string, unknown>) =>
-          documents.find((document) =>
-            Object.entries(filter).every(([key, value]) =>
-              key === "_id" && value instanceof ObjectId
-                ? (document[key] as ObjectId | undefined)?.equals(value)
-                : document[key] === value
-            )
-          ) ?? null,
+          documents.find((document) => matches(document, filter)) ?? null,
         insertOne: async (document: Record<string, unknown>) => {
           const _id = (document._id as ObjectId | undefined) ?? new ObjectId();
           documents.push({ ...document, _id });
@@ -40,27 +52,35 @@ function createFakeDb() {
         },
         findOneAndUpdate: async (
           filter: Record<string, unknown>,
-          update: { $set: Record<string, unknown> }
+          update: { $set?: Record<string, unknown>; $inc?: Record<string, number> },
+          options?: { upsert?: boolean }
         ) => {
-          const document = documents.find((entry) =>
-            Object.entries(filter).every(([key, value]) =>
-              key === "_id" && value instanceof ObjectId
-                ? (entry[key] as ObjectId | undefined)?.equals(value)
-                : entry[key] === value
-            )
-          );
+          let document = documents.find((entry) => matches(entry, filter));
+          if (!document && options?.upsert) {
+            const equalityFilter = Object.fromEntries(
+              Object.entries(filter).filter(([, value]) =>
+                typeof value !== "object" || value === null || value instanceof Date
+              )
+            );
+            document = { ...equalityFilter, _id: new ObjectId() };
+            documents.push(document);
+          }
           if (!document) return null;
-          Object.assign(document, update.$set);
+          if (update.$set) Object.assign(document, update.$set);
+          if (update.$inc) {
+            Object.entries(update.$inc).forEach(([key, value]) => {
+              document![key] = Number(document![key] ?? 0) + value;
+            });
+          }
           return document;
         },
+        findOneAndDelete: async (filter: Record<string, unknown>) => {
+          const index = documents.findIndex((document) => matches(document, filter));
+          if (index < 0) return null;
+          return documents.splice(index, 1)[0];
+        },
         deleteOne: async (filter: Record<string, unknown>) => {
-          const index = documents.findIndex((document) =>
-            Object.entries(filter).every(([key, value]) =>
-              key === "_id" && value instanceof ObjectId
-                ? (document[key] as ObjectId | undefined)?.equals(value)
-                : document[key] === value
-            )
-          );
+          const index = documents.findIndex((document) => matches(document, filter));
           if (index < 0) return { deletedCount: 0 };
           documents.splice(index, 1);
           return { deletedCount: 1 };
@@ -143,6 +163,35 @@ async function createStationAndBicycle(
   return { station, bicycle };
 }
 
+async function generateUnlockCode(
+  baseUrl: string,
+  headers: Record<string, string>,
+  bicycleId: string
+): Promise<string> {
+  const response = await fetch(`${baseUrl}/api/viajes/codigo-desbloqueo`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ bicicleta_id: bicycleId }),
+  });
+  const result = await response.json();
+  assert.equal(response.status, 201);
+  assert.match(result.codigo, /^\d{8}$/);
+  return result.codigo;
+}
+
+async function startTrip(
+  baseUrl: string,
+  headers: Record<string, string>,
+  bicycleId: string
+): Promise<Response> {
+  const codigoDesbloqueo = await generateUnlockCode(baseUrl, headers, bicycleId);
+  return fetch(`${baseUrl}/api/viajes`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ bicicletaId: bicycleId, codigoDesbloqueo }),
+  });
+}
+
 afterEach(async () => {
   await Promise.all(
     servers.splice(0).map(
@@ -156,7 +205,7 @@ afterEach(async () => {
 });
 
 test("authenticated client can start, return, and review a trip", async () => {
-  const { baseUrl, token, adminHeaders } = await startServer(9);
+  const { baseUrl, token, adminHeaders, fakeDb } = await startServer(9);
   const headers = {
     authorization: `Bearer ${token}`,
     "content-type": "application/json",
@@ -216,10 +265,35 @@ test("authenticated client can start, return, and review a trip", async () => {
   const publicBicycles = await (await fetch(`${baseUrl}/api/bicicletas`)).json();
   assert.equal(publicBicycles.some((item: Record<string, unknown>) => "unlockCode" in item), false);
 
+  const unlockCode = await generateUnlockCode(baseUrl, headers, bicycle.id);
+  const otherUserId = new ObjectId();
+  await fakeDb.collection("users").insertOne({
+    _id: otherUserId,
+    puntuacion: 10,
+    suspendidoHasta: null,
+    bloqueado: false,
+    role: "cliente",
+  });
+  const otherUserHeaders = {
+    authorization: `Bearer ${jwt.sign({
+      id: otherUserId.toString(),
+      nombre: "Otra persona",
+      role: "cliente",
+      accountCollection: "users",
+    }, process.env.JWT_SECRET!)}`,
+    "content-type": "application/json",
+  };
+  const otherUserStart = await fetch(`${baseUrl}/api/viajes`, {
+    method: "POST",
+    headers: otherUserHeaders,
+    body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: unlockCode }),
+  });
+  assert.equal(otherUserStart.status, 403);
+
   const start = await fetch(`${baseUrl}/api/viajes`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: bicycle.codigo }),
+    body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: unlockCode }),
   });
   const started = await start.json();
   assert.equal(start.status, 201);
@@ -250,6 +324,13 @@ test("authenticated client can start, return, and review a trip", async () => {
   assert.equal(history[0].fechaFin, finished.data.fechaFin);
   assert.equal(finished.puntuacion, 10);
 
+  const reusedCodeStart = await fetch(`${baseUrl}/api/viajes`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: unlockCode }),
+  });
+  assert.equal(reusedCodeStart.status, 403);
+
   const destinationDetail = await fetch(`${baseUrl}/api/estacion/${destination.id}`);
   const returnedBicycle = (await destinationDetail.json()).bicicletas[0];
   assert.equal(returnedBicycle.estado, "DISPONIBLE");
@@ -263,11 +344,7 @@ test("slow rides subtract a point, suspend at four, and block further rentals du
     "content-type": "application/json",
   };
   const { station, bicycle } = await createStationAndBicycle(baseUrl, adminHeaders, "Centro", "B-201");
-  const start = await fetch(`${baseUrl}/api/viajes`, {
-    method: "POST",
-    headers,
-      body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: bicycle.codigo }),
-  });
+  const start = await startTrip(baseUrl, headers, bicycle.id);
   const started = await start.json();
   const startedAt = new Date(Date.now() - 3 * 60 * 60 * 1000 - 1);
   await fakeDb.collection("trips").findOneAndUpdate(
@@ -304,11 +381,7 @@ test("reaching one point permanently blocks the account from starting trips", as
     "content-type": "application/json",
   };
   const { station, bicycle } = await createStationAndBicycle(baseUrl, adminHeaders, "Oeste", "B-202");
-  const start = await fetch(`${baseUrl}/api/viajes`, {
-    method: "POST",
-    headers,
-      body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: bicycle.codigo }),
-  });
+  const start = await startTrip(baseUrl, headers, bicycle.id);
   const started = await start.json();
   await fakeDb.collection("trips").findOneAndUpdate(
     { _id: new ObjectId(started.data.id) },
@@ -342,11 +415,7 @@ test("the trip score updates accounts created through the Spanish usuario API", 
     "content-type": "application/json",
   };
   const { station, bicycle } = await createStationAndBicycle(baseUrl, adminHeaders, "Este", "B-203");
-  const start = await fetch(`${baseUrl}/api/viajes`, {
-    method: "POST",
-    headers,
-      body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: bicycle.codigo }),
-  });
+  const start = await startTrip(baseUrl, headers, bicycle.id);
   const started = await start.json();
   const finish = await fetch(`${baseUrl}/api/viajes/${started.data.id}/devolver`, {
     method: "PATCH",
@@ -361,10 +430,50 @@ test("the trip score updates accounts created through the Spanish usuario API", 
   assert.equal(storedUser?.puntuacion, 10);
 });
 
+test("unlock codes expire after five failed attempts and can be regenerated", async () => {
+  const { baseUrl, token, adminHeaders } = await startServer();
+  const headers = {
+    authorization: `Bearer ${token}`,
+    "content-type": "application/json",
+  };
+  const { bicycle } = await createStationAndBicycle(baseUrl, adminHeaders, "Oeste", "B-204");
+  const code = await generateUnlockCode(baseUrl, headers, bicycle.id);
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const response = await fetch(`${baseUrl}/api/viajes`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: "00000000" }),
+    });
+    assert.equal(response.status, 403);
+  }
+
+  const lockedCodeResponse = await fetch(`${baseUrl}/api/viajes`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: code }),
+  });
+  assert.equal(lockedCodeResponse.status, 403);
+
+  const refreshedCode = await generateUnlockCode(baseUrl, headers, bicycle.id);
+  const start = await fetch(`${baseUrl}/api/viajes`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: refreshedCode }),
+  });
+  assert.equal(start.status, 201);
+});
+
 test("trip endpoints require authentication and reject disabled return stations", async () => {
   const { baseUrl, token, adminHeaders } = await startServer();
   const unauthenticated = await fetch(`${baseUrl}/api/viajes/mis-viajes`);
   assert.equal(unauthenticated.status, 401);
+  const unauthenticatedUnlockCode = await fetch(`${baseUrl}/api/viajes/codigo-desbloqueo`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ bicicletaId: "bike-1" }),
+  });
+  assert.equal(unauthenticatedUnlockCode.status, 401);
 
   const headers = {
     authorization: `Bearer ${token}`,
@@ -413,11 +522,7 @@ test("trip endpoints require authentication and reject disabled return stations"
     }),
   });
   const bicycle = await bicycleResponse.json();
-  const start = await fetch(`${baseUrl}/api/viajes`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ bicicletaId: bicycle.id, codigoDesbloqueo: bicycle.codigo }),
-  });
+  const start = await startTrip(baseUrl, headers, bicycle.id);
   const started = await start.json();
 
   const finish = await fetch(`${baseUrl}/api/viajes/${started.data.id}/devolver`, {

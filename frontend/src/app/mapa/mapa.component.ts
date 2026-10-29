@@ -22,6 +22,10 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   estacionSeleccionada: EstacionDetalle | null = null;
   bicicletaId = '';
   codigoDesbloqueo = '';
+  codigoGenerado = '';
+  codigoExpiraEn = '';
+  generandoCodigo = false;
+  iniciandoViaje = false;
   estacionDestinoId = '';
   viajeActivo: Viaje | null = null;
   error = '';
@@ -95,6 +99,7 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
     this.estacionIdSeleccionada = id;
     this.estacionSeleccionada = null;
     this.bicicletaId = '';
+    this.limpiarCodigoDesbloqueo();
     if (!id) return;
     this.estacionService.getById(id).subscribe({
       next: estacion => {
@@ -106,20 +111,53 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  seleccionarBicicleta(id: string): void {
+    this.bicicletaId = id;
+    this.limpiarCodigoDesbloqueo();
+    this.error = '';
+    this.mensaje = '';
+  }
+
+  generarCodigoDesbloqueo(): void {
+    if (!this.bicicletaId) return;
+    this.error = '';
+    this.mensaje = '';
+    this.limpiarCodigoDesbloqueo();
+    this.generandoCodigo = true;
+    this.viajeService.generateUnlockCode(this.bicicletaId).subscribe({
+      next: resultado => {
+        this.codigoGenerado = resultado.codigo;
+        this.codigoExpiraEn = resultado.expira_en;
+        this.mensaje = 'Código generado. Solo sirve para tu cuenta y esta bicicleta.';
+        this.generandoCodigo = false;
+        this.changeDetector.markForCheck();
+      },
+      error: error => {
+        this.generandoCodigo = false;
+        this.mostrarError(error);
+      }
+    });
+  }
+
   comenzarViaje(): void {
     if (!this.estacionSeleccionada?.id || !this.bicicletaId || !this.codigoDesbloqueo.trim()) return;
     this.error = '';
     this.mensaje = '';
+    this.iniciandoViaje = true;
     this.viajeService.start(this.bicicletaId, this.estacionSeleccionada.id, this.codigoDesbloqueo.trim()).subscribe({
       next: viaje => {
         this.viajeActivo = viaje;
         this.bicicletaId = '';
-        this.codigoDesbloqueo = '';
+        this.limpiarCodigoDesbloqueo();
+        this.iniciandoViaje = false;
         this.mensaje = 'Viaje iniciado. ¡Buen recorrido!';
         this.actualizarDisponibilidad();
         this.changeDetector.markForCheck();
       },
-      error: error => this.mostrarError(error)
+      error: error => {
+        this.iniciandoViaje = false;
+        this.mostrarError(error);
+      }
     });
   }
 
@@ -163,6 +201,12 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   private actualizarDisponibilidad(): void {
     this.cargarEstaciones();
     if (this.estacionSeleccionada?.id) this.seleccionarEstacion(this.estacionSeleccionada.id);
+  }
+
+  private limpiarCodigoDesbloqueo(): void {
+    this.codigoDesbloqueo = '';
+    this.codigoGenerado = '';
+    this.codigoExpiraEn = '';
   }
 
   private agregarMarcador(estacion: Estacion): void {

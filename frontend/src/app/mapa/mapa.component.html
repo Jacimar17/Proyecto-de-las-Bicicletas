@@ -110,15 +110,24 @@
 
         <div *ngIf="esCliente && !viajeActivo && bicicletasDisponibles.length > 0" class="rental-form">
           <label for="bicicleta">Elegí una bicicleta</label>
-          <select id="bicicleta" [(ngModel)]="bicicletaId">
+          <select id="bicicleta" [ngModel]="bicicletaId" (ngModelChange)="seleccionarBicicleta($event)">
             <option value="">Seleccioná una bicicleta</option>
             <option *ngFor="let bicicleta of bicicletasDisponibles" [value]="bicicleta.id">
               {{ bicicleta.codigo }} — {{ bicicleta.modelo }}
             </option>
           </select>
-          <label for="codigo-desbloqueo">Código de desbloqueo</label>
-          <input id="codigo-desbloqueo" type="text" autocomplete="off" [(ngModel)]="codigoDesbloqueo" placeholder="Ingresá el código de la bicicleta" />
-          <button type="button" class="primary-action" [disabled]="!bicicletaId || !codigoDesbloqueo.trim()" (click)="comenzarViaje()">Iniciar viaje <span aria-hidden="true">→</span></button>
+          <button type="button" class="primary-action" [disabled]="!bicicletaId || generandoCodigo || iniciandoViaje" (click)="generarCodigoDesbloqueo()">
+            {{ generandoCodigo ? 'Generando código…' : 'Generar código' }}
+          </button>
+          <p *ngIf="codigoGenerado" class="feedback success" role="status">
+            Tu código: <strong>{{ codigoGenerado }}</strong>
+            <small>Vence {{ codigoExpiraEn | date:'shortTime' }}. No lo compartas.</small>
+          </p>
+          <label for="codigo-desbloqueo">Ingresá el código generado</label>
+          <input id="codigo-desbloqueo" type="text" inputmode="numeric" autocomplete="one-time-code" [(ngModel)]="codigoDesbloqueo" placeholder="Código de 8 dígitos" />
+          <button type="button" class="primary-action" [disabled]="!bicicletaId || !codigoDesbloqueo.trim() || iniciandoViaje || generandoCodigo" (click)="comenzarViaje()">
+            {{ iniciandoViaje ? 'Desbloqueando…' : 'Iniciar viaje' }} <span aria-hidden="true">→</span>
+          </button>
         </div>
       </section>
 

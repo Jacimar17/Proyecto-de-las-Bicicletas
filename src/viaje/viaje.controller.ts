@@ -53,6 +53,20 @@ export class ViajeController {
         }
     };
 
+    generateUnlockCode = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const user = currentUser(res);
+            const bicicletaId = req.body?.bicicleta_id ?? req.body?.bicicletaId;
+            res.status(201).json(await this.service.generateUnlockCode(
+                user.id,
+                bicicletaId,
+                user.accountCollection
+            ));
+        } catch (error) {
+            res.status(errorStatus(error)).json({ message: errorMessage(error) });
+        }
+    };
+
     start = async (req: Request, res: Response): Promise<void> => {
         try {
             const user = currentUser(res);

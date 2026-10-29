@@ -28,6 +28,8 @@ export interface ApiData {
   mensaje?: string;
   message?: string;
   error?: string;
+  codigo?: string;
+  expira_en?: string;
   token?: string;
   user?: User;
   users?: User[];

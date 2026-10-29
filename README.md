@@ -69,14 +69,17 @@ Los endpoints en español alimentan la aplicación Angular:
 | `POST/PUT/DELETE` | `/api/estacion[/:id]` | Administrador | CRUD de estaciones |
 | `GET` | `/api/viajes` | Cliente | Consultar historial propio |
 | `GET` | `/api/viajes/activo` | Cliente | Consultar viaje en curso |
-| `POST` | `/api/viajes` | Cliente | Iniciar con `bicicleta_id` y `estacion_origen_id` |
+| `POST` | `/api/viajes/codigo-desbloqueo` | Cliente | Generar un código temporal para una bicicleta disponible |
+| `POST` | `/api/viajes` | Cliente | Iniciar con `bicicleta_id`, `estacion_origen_id` y `codigo_desbloqueo` generado |
 | `PATCH` | `/api/viajes/activo/finalizar` | Cliente | Devolver con `estacion_destino_id` |
 | `GET` | `/api/viajes/mis-viajes` | Cliente | Historial compatible con el menú de consola |
 | `PATCH` | `/api/viajes/:id/devolver` | Cliente | Devolución compatible con el menú de consola |
 | `GET` | `/api/mantenimientos` | Administrador/técnico | Consultar actualizaciones de mantenimiento |
 | `POST` | `/api/mantenimientos` | Técnico | Actualizar con `bicicleta_id` y `estado` |
 
-El sistema mantiene además rutas inglesas para funcionalidades heredadas (`/api/bicycles`, `/api/maintenance`, `/api/users`). Ambas APIs comparten las colecciones `users`, `bicycles`, `stations`, `trips` y `maintenances`; las bicicletas guardan campos equivalentes en español e inglés.
+El código de desbloqueo se genera con la sesión autenticada y queda asociado al usuario y a la bicicleta seleccionada. Dura 5 minutos, se invalida al usarlo y se bloquea después de 5 intentos incorrectos. El endpoint de inicio de viaje ya no acepta el código fijo de la bicicleta.
+
+El sistema mantiene además rutas inglesas para funcionalidades heredadas (`/api/bicycles`, `/api/maintenance`, `/api/users`). Ambas APIs comparten las colecciones `users`, `bicycles`, `stations`, `trips` y `maintenances`; los códigos temporales se almacenan aparte en `unlock_codes` y las bicicletas guardan campos equivalentes en español e inglés.
 
 ## Estructura de la API
 
