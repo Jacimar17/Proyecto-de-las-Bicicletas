@@ -92,13 +92,23 @@ async function startTrip(ctx: ReturnType<typeof setup>) {
   return ctx.service.start("u1", "b1", "s1", codigo);
 }
 
-test("viaje: código de desbloqueo de 8 dígitos, guardado solo como hash", async () => {
+test("viaje: código de desbloqueo de 4 dígitos, guardado solo como hash", async () => {
   const ctx = setup();
   const { codigo, expira_en } = await ctx.service.generateUnlockCode("u1", "b1");
-  assert.match(codigo, /^\d{8}$/);
+  assert.match(codigo, /^\d{4}$/);
   assert.ok(expira_en.getTime() > Date.now());
   assert.equal(ctx.codes[0].codigo_hash, hash(codigo));
   assert.notEqual(ctx.codes[0].codigo_hash, codigo);
+});
+
+test("viaje: código de desbloqueo que no tiene 4 dígitos se rechaza", async () => {
+  const ctx = setup();
+  await ctx.service.generateUnlockCode("u1", "b1");
+  await assert.rejects(ctx.service.start("u1", "b1", "s1", "123"), {
+    status: 400,
+    message: "El código de desbloqueo debe tener 4 dígitos",
+  });
+  assert.equal(ctx.codes[0].intentos, 0);
 });
 
 test("viaje: inicio correcto deja la bicicleta EN_USO sin estación y el código no se reutiliza", async () => {
@@ -113,8 +123,9 @@ test("viaje: inicio correcto deja la bicicleta EN_USO sin estación y el código
 
 test("viaje: código incorrecto se rechaza y cuenta el intento", async () => {
   const ctx = setup();
-  await ctx.service.generateUnlockCode("u1", "b1");
-  await assert.rejects(ctx.service.start("u1", "b1", "s1", "00000000"), { status: 403, message: "El código de desbloqueo no es correcto" });
+  const { codigo } = await ctx.service.generateUnlockCode("u1", "b1");
+  const codigoIncorrecto = String((Number(codigo) + 1) % 10_000).padStart(4, "0");
+  await assert.rejects(ctx.service.start("u1", "b1", "s1", codigoIncorrecto), { status: 403, message: "El código de desbloqueo no es correcto" });
   assert.equal(ctx.codes[0].intentos, 1);
   assert.equal(ctx.bicycles[0].estado, "DISPONIBLE");
 });

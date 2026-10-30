@@ -228,7 +228,7 @@ async function clientStartTrip(): Promise<void> {
     return;
   }
   console.log(`\nCódigo de desbloqueo (vence ${new Date(generatedCode.data.expira_en || "").toLocaleTimeString()}): ${generatedCode.data.codigo}`);
-  const unlockCode = await ask("Ingresá el código generado: ");
+  const unlockCode = await ask("Ingresá el código generado (4 dígitos): ");
   const { status, data } = await apiFetch("/api/trips", "POST", {
     bicicleta_id: bicycle.id,
     codigo_desbloqueo: unlockCode,

@@ -121,8 +121,8 @@
             <small>Vence {{ codigoExpiraEn | date:'shortTime' }}. No lo compartas.</small>
           </p>
           <label for="codigo-desbloqueo">Ingresá el código generado</label>
-          <input id="codigo-desbloqueo" type="text" inputmode="numeric" autocomplete="one-time-code" [(ngModel)]="codigoDesbloqueo" placeholder="Código de 8 dígitos" />
-          <button type="button" class="primary-action" [disabled]="!bicicletaId || !codigoDesbloqueo.trim() || iniciandoViaje || generandoCodigo" (click)="comenzarViaje()">
+          <input id="codigo-desbloqueo" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="4" pattern="[0-9]{4}" [(ngModel)]="codigoDesbloqueo" placeholder="Código de 4 dígitos" />
+          <button type="button" class="primary-action" [disabled]="!bicicletaId || !codigoDesbloqueoValido || iniciandoViaje || generandoCodigo" (click)="comenzarViaje()">
             {{ iniciandoViaje ? 'Desbloqueando…' : 'Iniciar viaje' }} <span aria-hidden="true">→</span>
           </button>
         </div>

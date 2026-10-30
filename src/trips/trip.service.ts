@@ -13,6 +13,7 @@ const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const UNLOCK_CODE_TTL_MS = 5 * 60 * 1000;
 const MAX_UNLOCK_CODE_ATTEMPTS = 5;
+const UNLOCK_CODE_PATTERN = /^\d{4}$/;
 
 export type FinishedTrip = Trip & { puntuacion: number; suspendidoHasta: Date | null; bloqueado: boolean };
 
@@ -50,7 +51,7 @@ export class TripService {
         if (!station) throw new ApiError('Estación no encontrada', 404);
         if (!station.activa) throw new ApiError('La estación no está habilitada', 400);
 
-        const code = randomInt(10_000_000, 100_000_000).toString();
+        const code = randomInt(0, 10_000).toString().padStart(4, '0');
         const expiresAt = new Date(Date.now() + UNLOCK_CODE_TTL_MS);
         await this.unlockCodeRepository.issue({
             usuario_id: userId,
@@ -72,6 +73,9 @@ export class TripService {
         }
         if (typeof unlockCode !== 'string' || !unlockCode.trim()) {
             throw new ApiError('El código de desbloqueo es obligatorio', 400);
+        }
+        if (!UNLOCK_CODE_PATTERN.test(unlockCode.trim())) {
+            throw new ApiError('El código de desbloqueo debe tener 4 dígitos', 400);
         }
         await this.assertCanStart(userId);
 

@@ -48,6 +48,10 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
     return this.estacionSeleccionada?.bicicletas.filter(bicicleta => bicicleta.estado === 'DISPONIBLE') ?? [];
   }
 
+  get codigoDesbloqueoValido(): boolean {
+    return /^\d{4}$/.test(this.codigoDesbloqueo.trim());
+  }
+
   get estacionesActivas(): number {
     return this.estaciones.filter(estacion => estacion.activa).length;
   }
@@ -147,7 +151,7 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   }
 
   comenzarViaje(): void {
-    if (!this.estacionSeleccionada?.id || !this.bicicletaId || !this.codigoDesbloqueo.trim()) return;
+    if (!this.estacionSeleccionada?.id || !this.bicicletaId || !this.codigoDesbloqueoValido) return;
     this.iniciandoViaje = true;
     this.viajeService.start(this.bicicletaId, this.estacionSeleccionada.id, this.codigoDesbloqueo.trim()).subscribe({
       next: viaje => {

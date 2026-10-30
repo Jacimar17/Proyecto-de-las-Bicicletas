@@ -25,7 +25,7 @@ Plataforma integral para la gestión y alquiler de bicicletas urbanas en la ciud
 
 - **Autenticación Dual:** Registro e inicio de sesión tradicional mediante DNI/correo y contraseña (encriptada con `bcryptjs` y sesiones con `JWT`), además de inicio de sesión con **Google OAuth 2.0** integrado con *Google Identity Services*.
 - **Mapa Interactivo con Leaflet:** Visualización en tiempo real de estaciones activas e inactivas geolocalizadas en Venado Tuerto, con capacidad, disponibilidad de bicicletas e inicio de alquiler directo desde la estación.
-- **Códigos de Desbloqueo Dinámicos:** Generación de códigos PIN temporales de 6 dígitos asociados al usuario y a la bicicleta elegida (expiran en 5 minutos y se bloquean tras 5 intentos fallidos consecutivos).
+- **Códigos de Desbloqueo Dinámicos:** Generación de códigos PIN temporales de 4 dígitos asociados al usuario y a la bicicleta elegida (expiran en 5 minutos y se bloquean tras 5 intentos fallidos consecutivos).
 - **Gestión de Viajes y Cronómetro:** Monitoreo del viaje activo con tiempo transcurrido en tiempo real, devolución en cualquier estación habilitada y registro de historial.
 - **Sistema de Reputación y Sanciones:** Puntuación de 1 a 10 para cada usuario que premia devoluciones a tiempo (hasta 3 horas) y penaliza demoras con suspensiones temporales escalonadas o bloqueo definitivo de la cuenta.
 - **Módulo Técnico con Diagrama Interactivo:** Taller mecánico visual con plano de bicicleta para inspección y asignación de tareas por zonas (`cadena`, `rueda_trasera`, `rueda_delantera`, `manubrio`, `frenos`, `asiento`).
@@ -261,7 +261,7 @@ Cada usuario comienza con una puntuación máxima de **10 puntos**:
 Para evitar fraudes o uso de códigos estáticos impresos:
 1. El cliente selecciona una bicicleta disponible en una estación activa.
 2. Solicita un código mediante `POST /api/viajes/codigo-desbloqueo`.
-3. El sistema genera un PIN numérico de 6 dígitos con **vigencia de 5 minutos**, visible en pantalla con cuenta regresiva.
+3. El sistema genera un PIN numérico de 4 dígitos con **vigencia de 5 minutos**, visible en pantalla con cuenta regresiva.
 4. El PIN queda vinculado exclusivamente al usuario autenticado y a esa bicicleta.
 5. Al enviar el formulario de inicio de viaje (`POST /api/viajes`), el código se valida e invalida de inmediato.
 6. Si se ingresa erróneamente 5 veces consecutivas, el código se bloquea por seguridad.
@@ -327,7 +327,7 @@ Authorization: Bearer <token_jwt>
 
 | Método | Endpoint | Acceso | Descripción |
 | --- | --- | --- | --- |
-| `POST` | `/api/viajes/codigo-desbloqueo` | Cliente | Genera un PIN temporal de 6 dígitos (válido por 5 minutos) para una bicicleta. |
+| `POST` | `/api/viajes/codigo-desbloqueo` | Cliente | Genera un PIN temporal de 4 dígitos (válido por 5 minutos) para una bicicleta. |
 | `POST` | `/api/viajes` | Cliente | Inicia un viaje con `bicicleta_id`, `estacion_origen_id` y `codigo_desbloqueo`. |
 | `GET` | `/api/viajes/activo` | Cliente | Consulta el viaje en curso del usuario autenticado (si existe). |
 | `PATCH` | `/api/viajes/activo/finalizar` | Cliente | Finaliza el viaje activo indicando la `estacion_destino_id` y actualiza puntuación. |
