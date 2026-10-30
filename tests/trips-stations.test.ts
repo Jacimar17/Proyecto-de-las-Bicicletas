@@ -144,36 +144,35 @@ test("viaje: no se permite un segundo viaje en curso", async () => {
   await assert.rejects(ctx.service.generateUnlockCode("u1", "b1"), { status: 409, message: "Ya tienes un viaje en curso" });
 });
 
-test("viaje: devolución a tiempo devuelve la bicicleta a la estación y suma puntos (máx. 10)", async () => {
+test("viaje: menos de 3 minutos no descuenta puntos", async () => {
   const ctx = setup({ score: 8 });
   await startTrip(ctx);
+  ctx.trips[0].fecha_inicio = new Date(Date.now() - 2 * 60 * 1000);
   const result = await ctx.service.finish("u1", "s2");
-  assert.equal(result.puntuacion, 9);
+  assert.equal(result.puntuacion, 8);
   assert.equal(result.bloqueado, false);
-  assert.equal(ctx.bicycles[0].estado, "DISPONIBLE");
-  assert.equal(ctx.bicycles[0].estacion_id, "s2");
-  assert.equal(ctx.bicycles[0].ubicacion, "Norte");
-
-  const capped = setup({ score: 10 });
-  await startTrip(capped);
-  assert.equal((await capped.service.finish("u1", "s1")).puntuacion, 10);
 });
 
-test("viaje: devolución con demora resta puntos, suspende y finalmente bloquea", async () => {
-  const late = setup({ score: 5 });
-  await startTrip(late);
-  late.trips[0].fecha_inicio = new Date(Date.now() - 4 * 60 * 60 * 1000);
-  const suspended = await late.service.finish("u1", "s2");
-  assert.equal(suspended.puntuacion, 4);
-  assert.ok(suspended.suspendidoHasta && suspended.suspendidoHasta.getTime() > Date.now());
-  assert.equal(suspended.bloqueado, false);
+test("viaje: desde 3 minutos descuenta 1 punto y desde 5 minutos descuenta 2", async () => {
+  const threeMinutes = setup({ score: 8 });
+  await startTrip(threeMinutes);
+  threeMinutes.trips[0].fecha_inicio = new Date(Date.now() - (3 * 60 + 1) * 1000);
+  assert.equal((await threeMinutes.service.finish("u1", "s2")).puntuacion, 7);
 
-  const last = setup({ score: 2 });
-  await startTrip(last);
-  last.trips[0].fecha_inicio = new Date(Date.now() - 4 * 60 * 60 * 1000);
-  const blocked = await last.service.finish("u1", "s2");
-  assert.equal(blocked.puntuacion, 1);
-  assert.equal(blocked.bloqueado, true);
+  const fiveMinutes = setup({ score: 8 });
+  await startTrip(fiveMinutes);
+  fiveMinutes.trips[0].fecha_inicio = new Date(Date.now() - (5 * 60 + 1) * 1000);
+  assert.equal((await fiveMinutes.service.finish("u1", "s2")).puntuacion, 6);
+});
+
+test("viaje: más de 6 minutos bloquea la cuenta sin descontar puntos", async () => {
+  const ctx = setup({ score: 8 });
+  await startTrip(ctx);
+  ctx.trips[0].fecha_inicio = new Date(Date.now() - (6 * 60 + 1) * 1000);
+  const result = await ctx.service.finish("u1", "s2");
+  assert.equal(result.puntuacion, 8);
+  assert.equal(result.bloqueado, true);
+  await assert.rejects(ctx.service.generateUnlockCode("u1", "b1"), { status: 403 });
 });
 
 test("viaje: finalizar sin viaje activo o a una estación inhabilitada falla", async () => {

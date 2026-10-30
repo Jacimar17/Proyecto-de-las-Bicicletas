@@ -27,7 +27,7 @@ Plataforma integral para la gestión y alquiler de bicicletas urbanas en la ciud
 - **Mapa Interactivo con Leaflet:** Visualización en tiempo real de estaciones activas e inactivas geolocalizadas en Venado Tuerto, con capacidad, disponibilidad de bicicletas e inicio de alquiler directo desde la estación.
 - **Códigos de Desbloqueo Dinámicos:** Generación de códigos PIN temporales de 4 dígitos asociados al usuario y a la bicicleta elegida (expiran en 5 minutos y se bloquean tras 5 intentos fallidos consecutivos).
 - **Gestión de Viajes y Cronómetro:** Monitoreo del viaje activo con tiempo transcurrido en tiempo real, devolución en cualquier estación habilitada y registro de historial.
-- **Sistema de Reputación y Sanciones:** Puntuación de 1 a 10 para cada usuario que premia devoluciones a tiempo (hasta 3 horas) y penaliza demoras con suspensiones temporales escalonadas o bloqueo definitivo de la cuenta.
+- **Sistema de Reputación y Sanciones:** Puntuación de 1 a 10 para cada usuario, con descuentos según el tiempo del viaje y bloqueo de la cuenta si la devolución supera los 6 minutos.
 - **Módulo Técnico con Diagrama Interactivo:** Taller mecánico visual con plano de bicicleta para inspección y asignación de tareas por zonas (`cadena`, `rueda_trasera`, `rueda_delantera`, `manubrio`, `frenos`, `asiento`).
 - **Panel Administrativo Completo:** Panel de control con 6 módulos para gestionar usuarios, bicicletas, estaciones (con selector de coordenadas sobre mapa), monitoreo global de viajes, historial de mantenimientos y catálogo de tareas.
 - **Sincronización Local / Atlas:** Capacidad de operar conectado a MongoDB local, a MongoDB Atlas o en modo local con sincronizador periódico en segundo plano hacia la nube (`SyncService`).
@@ -245,10 +245,12 @@ Al ejecutar `npm run seed`, la base de datos se inicializa con los siguientes da
 ### Sistema de Puntuación y Penalizaciones
 
 Cada usuario comienza con una puntuación máxima de **10 puntos**:
-- **Devolución a tiempo (≤ 3 horas):** Suma **+1 punto** (hasta el máximo de 10).
-- **Devolución con demora (> 3 horas):** Resta **-1 punto**.
+- **Menos de 3 minutos:** No se descuentan puntos.
+- **Desde 3 minutos y menos de 5:** Resta **1 punto**.
+- **Desde 5 minutos hasta 6 inclusive:** Resta **2 puntos**.
+- **Más de 6 minutos:** Se bloquea la cuenta, sin descuento adicional de puntos.
 
-**Escala de suspensiones según el puntaje:**
+**Escala de suspensiones según el puntaje** (se mantiene para los descuentos que llevan la puntuación a estos valores):
 - **4 puntos:** Suspensión de la cuenta por **1 día**.
 - **3 puntos:** Suspensión de la cuenta por **2 días**.
 - **2 puntos:** Suspensión de la cuenta por **3 días**.

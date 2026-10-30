@@ -9,7 +9,10 @@ import { UnlockCodeRepository } from './unlock-code.repository.interface';
 
 const MAX_SCORE = 10;
 const MIN_SCORE = 1;
-const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+const THREE_MINUTES_MS = 3 * MINUTE_MS;
+const FIVE_MINUTES_MS = 5 * MINUTE_MS;
+const SIX_MINUTES_MS = 6 * MINUTE_MS;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const UNLOCK_CODE_TTL_MS = 5 * 60 * 1000;
 const MAX_UNLOCK_CODE_ATTEMPTS = 5;
@@ -173,10 +176,16 @@ export class TripService {
                 typeof account.puntuacion === 'number' && Number.isInteger(account.puntuacion)
                     ? Math.max(MIN_SCORE, Math.min(MAX_SCORE, account.puntuacion))
                     : MAX_SCORE;
-            const newScore =
-                finishedAt.getTime() - startedAt.getTime() <= THREE_HOURS_MS
-                    ? Math.min(MAX_SCORE, currentScore + 1)
-                    : Math.max(MIN_SCORE, currentScore - 1);
+            const durationMs = finishedAt.getTime() - startedAt.getTime();
+            const blockedForDuration = durationMs > SIX_MINUTES_MS;
+            const pointsToDeduct = durationMs >= FIVE_MINUTES_MS
+                ? 2
+                : durationMs >= THREE_MINUTES_MS
+                    ? 1
+                    : 0;
+            const newScore = blockedForDuration
+                ? currentScore
+                : Math.max(MIN_SCORE, currentScore - pointsToDeduct);
             const suspensionDays: Record<number, number> = { 4: 1, 3: 2, 2: 3 };
             const previousSuspension = account.suspendidoHasta ?? null;
             const suspendedUntil = suspensionDays[newScore]
@@ -184,7 +193,7 @@ export class TripService {
                 : previousSuspension && previousSuspension.getTime() > finishedAt.getTime()
                     ? previousSuspension
                     : null;
-            const blocked = newScore === MIN_SCORE || (account.bloqueado ?? false);
+            const blocked = blockedForDuration || newScore === MIN_SCORE || (account.bloqueado ?? false);
             const saved = await this.userRepository.update(userId, {
                 puntuacion: newScore,
                 suspendidoHasta: suspendedUntil,

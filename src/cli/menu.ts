@@ -19,7 +19,7 @@ function apiFetch(
   return apiClient.request(path, method, body);
 }
 
-function showBicycles(bicycles: Bicycle[]): void {
+function showBicycles(bicycles: Bicycle[], occupants?: ReadonlyMap<string, string>): void {
   if (bicycles.length === 0) {
     console.log("No hay bicicletas registradas.\n");
     return;
@@ -31,6 +31,9 @@ function showBicycles(bicycles: Bicycle[]): void {
     console.log(`Modelo: ${bicycle.modelo}`);
     console.log(`Ubicación: ${bicycle.ubicacion}`);
     console.log(`Estado: ${bicycle.estado.replace(/_/g, " ")}`);
+    if (bicycle.estado === "EN_USO" && occupants) {
+      console.log(`Usuario ocupante: ${occupants.get(bicycle.id) || "No identificado"}`);
+    }
   });
   console.log("");
 }
@@ -351,10 +354,39 @@ async function adminMenu(): Promise<"login" | "exit"> {
 }
 
 async function adminViewAllBicycles(): Promise<void> {
-  const bicycles = await getBicycles();
+  const [bicycles, tripsResult, usersResult] = await Promise.all([
+    getBicycles(),
+    apiFetch("/api/trips/all"),
+    apiFetch("/api/users"),
+  ]);
   if (!bicycles) return;
+  if (tripsResult.status !== 200 || !Array.isArray(tripsResult.data)) {
+    print(tripsResult.data);
+    return;
+  }
+  if (usersResult.status !== 200 || !Array.isArray(usersResult.data)) {
+    print(usersResult.data);
+    return;
+  }
+
+  const activeTrips = tripsResult.data as unknown as Trip[];
+  const users = usersResult.data as unknown as User[];
+  const usersById = new Map(users.map((user) => [user.id, user]));
+  const occupants = new Map<string, string>();
+  activeTrips
+    .filter((trip) => !trip.fecha_fin)
+    .forEach((trip) => {
+      const user = usersById.get(trip.usuario_id);
+      if (user) {
+        const name = [user.nombre, user.apellido].filter(Boolean).join(" ");
+        occupants.set(trip.bicicleta_id, `${name} (${user.email})`);
+      } else {
+        occupants.set(trip.bicicleta_id, `Usuario ID: ${trip.usuario_id}`);
+      }
+    });
+
   console.log("\n----- ESTADO DE TODAS LAS BICICLETAS -----");
-  showBicycles(bicycles);
+  showBicycles(bicycles, occupants);
 }
 
 async function adminMarkStatus(targetStatus: "DISPONIBLE" | "EN_MANTENIMIENTO"): Promise<void> {
