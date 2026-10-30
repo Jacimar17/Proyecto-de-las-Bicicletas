@@ -80,6 +80,10 @@ async function clientMenu(): Promise<"login" | "exit"> {
   while (true) {
     const user = currentUser;
     if (!user) return "login";
+    console.log("\n¡¡¡¡¡¡¡¡INFORMACION IMPORTANTE!!!!!!!!");
+    console.log("TU CUENTA SERA BLOQUEADA SI DEVUELVES TU BICICLETA DESPUES DE LAS 6 HORAS.");
+    console.log("EL TIEMPO MAXIMO ES DE 3 HORAS, PROXIMAMENTE SE TE DESCONTARAN PUNTOS CADA VEZ QUE DEVUELVAS TU BICICLETA DESPUES DE ESTE TIEMPO.");
+    console.log("Para mas informacion presiona AYUDA.\n");
     console.log("\n========= MENÚ CLIENTE =========");
     console.log(`Usuario: ${user.nombre} (${user.email})`);
     console.log("1. Ver estaciones y bicicletas disponibles");
@@ -566,6 +570,7 @@ async function listAllUsers(): Promise<void> {
     users.forEach((u, i) => {
       console.log(`\n${i + 1}. ${u.nombre} ${u.apellido ?? ""} (${u.email})`);
       console.log(`   ID: ${u.id} | Rol: ${u.role || "cliente"}`);
+      if (u.bloqueado) console.log("   ¡USUARIO BLOQUEADO!");
     });
     console.log("");
   } else {
@@ -595,12 +600,14 @@ async function updateUserFlow(): Promise<void> {
   const apellido = await ask("Nuevo apellido (Enter = no cambiar): ");
   const email = await ask("Nuevo email (Enter = no cambiar): ");
   const password = await ask("Nueva contraseña (Enter = no cambiar): ");
+  const desbloquear = await ask("¿Desbloquear al usuario si está bloqueado? (si/no/Enter = no cambiar): ");
 
-  const body: Record<string, string> = {};
+  const body: Record<string, string | boolean> = {};
   if (nombre) body.nombre = nombre;
   if (apellido) body.apellido = apellido;
   if (email) body.email = email;
   if (password) body.password = password;
+  if (desbloquear.toLowerCase() === "si") body.bloqueado = false;
 
   const { status, data } = await apiFetch(`/api/users/${id}`, "PUT", body);
   if (status === 200) {
