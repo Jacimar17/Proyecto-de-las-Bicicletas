@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { test } from "node:test";
+import { ApiClient } from "../src/cli/api-client";
 
 test("TypeScript CLI menu starts and exits through its menu option", () => {
   const result = spawnSync(
@@ -19,6 +20,19 @@ test("TypeScript CLI menu starts and exits through its menu option", () => {
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /SISTEMA DE BICICLETAS COMPARTIDAS DE VENADO TUERTO/);
   assert.match(result.stdout, /¡Hasta luego!/);
+});
+
+test("CLI API client accepts successful 204 responses without a body", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(null, { status: 204 });
+
+  try {
+    const client = new ApiClient(() => "admin-token");
+    const result = await client.request("/api/users/user-1", "DELETE");
+    assert.deepEqual(result, { status: 204, data: {} });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("admin CLI shows the user occupying each bicycle in use", { timeout: 20_000 }, async () => {

@@ -26,6 +26,9 @@ export class ApiClient {
 
     try {
       const response = await fetch(`${API_BASE_URL}${path}`, options);
+      if (response.status === 204) {
+        return { status: response.status, data: {} };
+      }
       const data = (await response.json()) as ApiData;
       return { status: response.status, data };
     } catch (error: unknown) {
