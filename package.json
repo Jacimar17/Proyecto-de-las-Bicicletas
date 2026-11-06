@@ -11,7 +11,7 @@
     "dev": "concurrently -n backend,frontend -c blue,green \"npm run start:backend\" \"npm run start:frontend\"",
     "menu": "node -r ts-node/register src/cli/index.ts",
     "seed": "node -r ts-node/register src/seed.ts",
-    "migrate:bicis-admin": "node -r ts-node/register src/migrations/rename-bicis-and-admin.ts",
+    "redistribute:atlas-bikes": "node -r ts-node/register src/scripts/redistribute-atlas-bicycles.ts",
     "build": "tsc --noEmit"
   },
   "keywords": [],

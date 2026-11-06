@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
+import { randomInt } from 'node:crypto';
 import { Collection, Document, MongoClient, ObjectId } from 'mongodb';
 import { getMongoConnectionUri, getMongoDbName, getMongoMode } from './config/db';
 import { COLLECTIONS } from './config/collections';
@@ -17,11 +18,11 @@ interface StationSeedDocument extends Document {
 }
 
 const stations = [
-    { nombre: 'Centro', barrio: 'Centro', direccion: 'San Martín y Belgrano', lat: -33.7456, lng: -61.9688, capacidad: 10, activa: true },
-    { nombre: 'San Martín', barrio: 'San Martín', direccion: 'Av. San Martín 1200', lat: -33.7420, lng: -61.9720, capacidad: 10, activa: true },
-    { nombre: 'Belgrano', barrio: 'Belgrano', direccion: 'Belgrano y Mitre', lat: -33.7500, lng: -61.9640, capacidad: 10, activa: true },
-    { nombre: 'Tiro Federal', barrio: 'Tiro Federal', direccion: 'Av. Circunvalación 500', lat: -33.7380, lng: -61.9560, capacidad: 10, activa: true },
-    { nombre: 'Juan XXIII', barrio: 'Juan XXIII', direccion: 'Juan XXIII y Libertad', lat: -33.7550, lng: -61.9800, capacidad: 10, activa: true },
+    { nombre: 'Centro', barrio: 'Centro', direccion: 'San Martín y Belgrano', lat: -33.7456, lng: -61.9688, capacidad: 15, activa: true },
+    { nombre: 'San Martín', barrio: 'San Martín', direccion: 'Av. San Martín 1200', lat: -33.7420, lng: -61.9720, capacidad: 15, activa: true },
+    { nombre: 'Belgrano', barrio: 'Belgrano', direccion: 'Belgrano y Mitre', lat: -33.7500, lng: -61.9640, capacidad: 15, activa: true },
+    { nombre: 'Tiro Federal', barrio: 'Tiro Federal', direccion: 'Av. Circunvalación 500', lat: -33.7380, lng: -61.9560, capacidad: 15, activa: true },
+    { nombre: 'Juan XXIII', barrio: 'Juan XXIII', direccion: 'Juan XXIII y Libertad', lat: -33.7550, lng: -61.9800, capacidad: 15, activa: true },
 ];
 
 // Barrios de Venado Tuerto: coordenadas aproximadas, inicializados como estaciones no habilitadas.
@@ -82,6 +83,7 @@ async function seed(): Promise<void> {
         }, 'papu1234', now);
 
         const exampleBicycles: Array<{ _id: ObjectId; stationId: string }> = [];
+        let nextBicycleNumber = await bicyclesCollection.countDocuments();
         for (const stationData of stations) {
             let station = await stationsCollection.findOne({ nombre: stationData.nombre });
             if (!station) {
@@ -99,29 +101,35 @@ async function seed(): Promise<void> {
             }
 
             const existingBicycles = await bicyclesCollection.countDocuments({ estacion_id: station._id.toString() });
-            for (let i = 1; i <= 10 && existingBicycles === 0; i++) {
-                const codigo = `${stationData.nombre.toUpperCase().replace(' ', '-')}-${String(i).padStart(2, '0')}`;
-                await bicyclesCollection.updateOne(
-                    { codigo },
-                    {
-                        $setOnInsert: {
-                            codigo,
-                            modelo: 'Urbana Aro 26',
-                            ubicacion: stationData.nombre,
-                            estado: 'DISPONIBLE',
-                            estacion_id: station._id.toString(),
-                            usuario_id: null,
-                            fecha_ultima_revision: null,
-                            tecnico_responsable: null,
-                            createdAt: now,
-                            updatedAt: now,
-                        },
-                    },
-                    { upsert: true },
-                );
+            if (existingBicycles === 0) {
+                if (stationData.capacidad < 9) {
+                    throw new Error(`La estación "${stationData.nombre}" no tiene capacidad para el mínimo de 9 bicicletas`);
+                }
+                const cantidad = randomInt(9, Math.min(14, stationData.capacidad) + 1);
+                for (let i = 0; i < cantidad; i++) {
+                    let codigo: string;
+                    do {
+                        nextBicycleNumber++;
+                        codigo = `BICI-${String(nextBicycleNumber).padStart(2, '0')}`;
+                    } while (await bicyclesCollection.findOne({ codigo }));
+                    await bicyclesCollection.insertOne({
+                        codigo,
+                        modelo: 'Urbana Aro 26',
+                        ubicacion: stationData.nombre,
+                        estado: 'DISPONIBLE',
+                        estacion_id: station._id.toString(),
+                        usuario_id: null,
+                        fecha_ultima_revision: null,
+                        tecnico_responsable: null,
+                        createdAt: now,
+                        updatedAt: now,
+                    });
+                }
             }
-            const example = await bicyclesCollection.findOne({ codigo: `${stationData.nombre.toUpperCase().replace(' ', '-')}-01` });
-            if (example && exampleBicycles.length < 2) exampleBicycles.push({ _id: example._id as ObjectId, stationId: station._id.toString() });
+            const example = await bicyclesCollection.findOne({ estacion_id: station._id.toString() });
+            if (example && exampleBicycles.length < 2) {
+                exampleBicycles.push({ _id: example._id as ObjectId, stationId: station._id.toString() });
+            }
             console.log(`Estación "${stationData.nombre}" y bicicletas verificadas.`);
         }
 
@@ -156,7 +164,7 @@ async function seed(): Promise<void> {
             });
         }
 
-        console.log(`Seed completado (admin ${adminId}, tecnico ${technicianId}, PAPU ${papuId}): usuarios, 5 estaciones, 50 bicicletas, 1 viaje y 1 mantenimiento de ejemplo.`);
+        console.log(`Seed completado (admin ${adminId}, tecnico ${technicianId}, PAPU ${papuId}): usuarios, 5 estaciones, bicicletas y datos de muestra.`);
     } finally {
         await client.close();
     }

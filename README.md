@@ -63,7 +63,7 @@ Proyecto-de-las-Bicicletas/
 │   ├── common/                       # Manejo centralizado de errores (ApiError)
 │   ├── config/                       # Conexión a MongoDB (local/Atlas) y colecciones
 │   ├── maintenance/                  # Dominio de mantenimientos y catálogo de tareas por zona
-│   ├── migrations/                   # Scripts de migración de base de datos
+│   ├── scripts/                      # Operaciones puntuales de datos
 │   ├── stations/                     # Dominio de estaciones
 │   ├── sync/                         # Servicio y rutas de sincronización con Atlas
 │   ├── trips/                        # Dominio de viajes y códigos temporales de desbloqueo
@@ -100,7 +100,7 @@ En PowerShell puedes usar `Copy-Item .env.example .env`. Ajusta los valores del 
 > - **Modo local:** Usa `LOCAL_MONGO_URI` (o, como alternativas, `MONGO_URI` / `DATABASE_URL`; si no se configura ninguna, usa `mongodb://127.0.0.1:27017`). Si también configuras `ATLAS_URI`, se habilita la sincronización periódica entre la base local y Atlas.
 > - **Modo Atlas:** `ATLAS_URI` es obligatorio y la aplicación usa Atlas directamente; no se ejecuta sincronización local/Atlas. Habilita tu dirección IP en **Network Access** de Atlas.
 > - **Google Sign-In:** `GOOGLE_CLIENT_ID` debe coincidir con el ID de cliente configurado en `frontend/src/app/shared/google-config.ts`. Si no se configura en el backend, el inicio de sesión con Google falla; el acceso tradicional sigue disponible.
-> - **Otras variables opcionales:** `SYNC_INTERVAL_MS` cambia el intervalo de sincronización (30 segundos por defecto); `SEED_ADMIN_PASSWORD` define la contraseña inicial compartida por admin y técnico al sembrar datos; `ADMIN_DNI` y `ADMIN_PASSWORD` solo se usan en la migración.
+> - **Otras variables opcionales:** `SYNC_INTERVAL_MS` cambia el intervalo de sincronización (30 segundos por defecto); `SEED_ADMIN_PASSWORD` define la contraseña inicial compartida por admin y técnico al sembrar datos.
 > - `API_BASE_URL` solo configura el CLI. La URL de la API del frontend está definida actualmente en `frontend/src/app/shared/api-config.ts`.
 
 ---
@@ -153,8 +153,8 @@ Abre tu navegador en: **`http://localhost:4200`**
 | `npm run start:frontend` | Inicia únicamente el frontend Angular (`ng serve`). |
 | `npm start` | Inicia directamente la API backend con `ts-node` (`node -r ts-node/register server.ts`). |
 | `npm run menu` | Inicia el menú interactivo por consola (CLI). |
-| `npm run seed` | Carga las cuentas por defecto, 5 estaciones activas, 10 barrios, 50 bicicletas y datos de muestra sin borrar colecciones. |
-| `npm run migrate:bicis-admin` | Script de migración para normalizar códigos de bicicletas (`BICI - 01`) y asignar rol administrador por DNI. |
+| `npm run seed` | Carga cuentas, estaciones, bicicletas y datos de muestra sin borrar colecciones. Las estaciones de ejemplo reciben entre 9 y 14 bicicletas. |
+| `npm run redistribute:atlas-bikes` | Renombra bicicletas con el formato `BICI-01` y distribuye entre 9 y 14 por estación activa en Atlas; conserva viajes en curso y deja los excedentes sin asignar. |
 | `npm test` | Ejecuta los cinco archivos de pruebas del backend definidos en `package.json`. |
 | `npm run build` | Comprueba los tipos TypeScript del backend (`tsc --noEmit`); no genera una compilación de producción. |
 | `npm --prefix frontend test` | Ejecuta las pruebas unitarias del frontend con **Vitest**. |
