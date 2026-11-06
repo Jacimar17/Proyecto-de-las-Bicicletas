@@ -67,9 +67,16 @@ export class RegistroComponent implements AfterViewInit {
 
   registro(): void {
     this.cargando = true;
-    this.usuarioService.registro({ nombre: this.nombre, dni: this.dni, email: this.email, password: this.password }).subscribe({
+    const dni = this.dni.trim();
+    const email = this.email.trim();
+    this.usuarioService.registro({
+      nombre: this.nombre,
+      ...(dni ? { dni } : {}),
+      email,
+      password: this.password
+    }).subscribe({
       next: () => {
-        this.usuarioService.login({ dni: this.dni, password: this.password }).subscribe({
+        this.usuarioService.login({ email, password: this.password }).subscribe({
           next: response => {
             this.cargando = false;
             this.usuarioService.guardarSesion(response);

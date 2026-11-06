@@ -7,12 +7,13 @@ import { API_BASE_URL } from '../api-config';
 export type RolUsuario = 'cliente' | 'admin' | 'tecnico';
 
 export interface LoginRequest {
-  dni: string;
+  dni?: string;
+  email?: string;
   password: string;
 }
 
 export interface RegistroRequest {
-  dni: string;
+  dni?: string;
   nombre: string;
   email: string;
   password: string;
@@ -20,7 +21,7 @@ export interface RegistroRequest {
 
 export interface Usuario {
   id?: string;
-  dni: string;
+  dni?: string;
   nombre: string;
   email: string;
   bloqueado: boolean;

@@ -20,7 +20,7 @@ import { GOOGLE_CLIENT_ID } from '../shared/google-config';
 export class LoginComponent implements AfterViewInit {
   @ViewChild('googleButton') googleButton!: ElementRef<HTMLElement>;
 
-  dni = '';
+  identificador = '';
   password = '';
   cargando = false;
 
@@ -50,7 +50,11 @@ export class LoginComponent implements AfterViewInit {
 
   login(): void {
     this.cargando = true;
-    this.usuarioService.login({ dni: this.dni, password: this.password }).subscribe(this.observador());
+    const identificador = this.identificador.trim();
+    const credenciales = identificador.includes('@')
+      ? { email: identificador, password: this.password }
+      : { dni: identificador, password: this.password };
+    this.usuarioService.login(credenciales).subscribe(this.observador());
   }
 
   private loginGoogle(credential: string): void {

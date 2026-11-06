@@ -175,13 +175,14 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   editarUsuario(usuario: Usuario): void {
     this.seleccionado = usuario.id ?? null;
-    this.usuarioForm = { ...usuario, password: '' };
+    this.usuarioForm = { ...usuario, dni: usuario.dni ?? '', password: '' };
   }
 
   eliminarUsuario(usuario: Usuario): void {
     if (!usuario.id) return;
     const id = usuario.id;
-    void this.notifications.confirmarCambio(`Vas a eliminar el usuario ${usuario.nombre} (DNI: ${usuario.dni})`).then(ok => {
+    const documento = usuario.dni ? `DNI: ${usuario.dni}` : 'sin DNI';
+    void this.notifications.confirmarCambio(`Vas a eliminar el usuario ${usuario.nombre} (${documento})`).then(ok => {
       if (!ok) return;
       this.usuarioService.delete(id).subscribe({
         next: () => { this.notifications.success('Usuario eliminado'); this.cargarUsuarios(); },
@@ -263,9 +264,11 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   private guardarUsuario(): void {
     const { password, ...datos } = this.usuarioForm;
+    const dni = datos.dni.trim();
+    const datosUsuario = { ...datos, ...(dni ? { dni } : { dni: undefined }) };
     const request = this.seleccionado
-      ? this.usuarioService.update(this.seleccionado, { ...datos, ...(password ? { password } : {}) })
-      : this.usuarioService.create({ ...datos, password });
+      ? this.usuarioService.update(this.seleccionado, { ...datosUsuario, ...(password ? { password } : {}) })
+      : this.usuarioService.create({ ...datosUsuario, password });
     request.subscribe({
       next: () => { this.notifications.success('Usuario guardado'); this.limpiarFormulario(); this.cargarUsuarios(); },
       error: error => this.mostrarError(error)

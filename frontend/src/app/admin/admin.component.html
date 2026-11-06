@@ -19,7 +19,7 @@
   <section *ngIf="seccion === 'usuarios'">
     <h2>{{ seleccionado ? 'Modificar usuario' : 'Agregar usuario' }}</h2>
     <form class="formulario" (ngSubmit)="guardar()">
-      <label>DNI<input name="dni" [(ngModel)]="usuarioForm.dni" required /></label>
+      <label>DNI (opcional)<input name="dni" [(ngModel)]="usuarioForm.dni" /></label>
       <label>Nombre<input name="nombre" [(ngModel)]="usuarioForm.nombre" required /></label>
       <label>Email<input name="email" type="email" [(ngModel)]="usuarioForm.email" required /></label>
       <label>Contraseña<input name="password" type="password" [(ngModel)]="usuarioForm.password" [required]="!seleccionado" minlength="6" /></label>
@@ -39,7 +39,7 @@
     <div class="tabla-wrap">
       <table><thead><tr><th>DNI</th><th>Nombre</th><th>Email</th>      <th>Rol</th><th>Puntuación</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody><tr *ngFor="let usuario of usuarios">
-          <td>{{ usuario.dni }}</td><td>{{ usuario.nombre }}</td><td>{{ usuario.email }}</td><td>{{ usuario.role }}</td>
+          <td>{{ usuario.dni || '—' }}</td><td>{{ usuario.nombre }}</td><td>{{ usuario.email }}</td><td>{{ usuario.role }}</td>
                 <td>{{ usuario.puntuacion ?? '-' }}</td>
           <td>{{ usuario.bloqueado ? 'Bloqueado' : 'Activo' }}</td>
           <td class="acciones">
