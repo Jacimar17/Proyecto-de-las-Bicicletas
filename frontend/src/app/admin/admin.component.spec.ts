@@ -35,4 +35,58 @@ describe('AdminComponent', () => {
 
     expect(component.estacionForm).toEqual(coordenadasIniciales);
   });
+
+  it('marks a station unavailable when it already stores 15 bicycles', () => {
+    const fixture = TestBed.createComponent(AdminComponent);
+    const component = fixture.componentInstance;
+    const station = {
+      id: 'station-1',
+      nombre: 'Centro',
+      barrio: 'Centro',
+      direccion: 'Belgrano 1',
+      lat: 0,
+      lng: 0,
+      capacidad: 15,
+      activa: true,
+      total_bicicletas: 15,
+      disponibles: 15
+    };
+    component.estaciones = [station];
+    component.bicicletaForm.estacion_id = station.id;
+
+    expect(component.estacionAlmacenamientoCompleta(station)).toBe(true);
+    expect(component.estacionDestinoCompleta).toBe(true);
+  });
+
+  it('allows editing a bicycle without counting its current station assignment as a new one', () => {
+    const fixture = TestBed.createComponent(AdminComponent);
+    const component = fixture.componentInstance;
+    const station = {
+      id: 'station-1',
+      nombre: 'Centro',
+      barrio: 'Centro',
+      direccion: 'Belgrano 1',
+      lat: 0,
+      lng: 0,
+      capacidad: 15,
+      activa: true,
+      total_bicicletas: 15,
+      disponibles: 15
+    };
+    component.estaciones = [station];
+    component.bicicletas = Array.from({ length: 15 }, (_, index) => ({
+      id: `bike-${index}`,
+      codigo: `BIC-${index}`,
+      modelo: 'Urbana',
+      ubicacion: 'Centro',
+      estado: 'DISPONIBLE' as const,
+      estacion_id: station.id,
+      fecha_ultima_revision: null,
+      tecnico_responsable: null
+    }));
+    component.seleccionado = 'bike-0';
+    component.bicicletaForm.estacion_id = station.id;
+
+    expect(component.estacionDestinoCompleta).toBe(false);
+  });
 });

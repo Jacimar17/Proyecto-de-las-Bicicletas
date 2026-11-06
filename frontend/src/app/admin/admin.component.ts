@@ -20,6 +20,7 @@ type SeccionAdmin = 'usuarios' | 'bicicletas' | 'estaciones' | 'viajes' | 'mante
   styleUrl: './admin.component.css'
 })
 export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
+  readonly limiteBicicletasPorEstacion = 15;
   seccion: SeccionAdmin = 'bicicletas';
   usuarios: Usuario[] = [];
   bicicletas: Bicicleta[] = [];
@@ -46,7 +47,7 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   };
   estacionForm = {
     nombre: '', barrio: '', direccion: '', lat: -33.7456, lng: -61.9688,
-    capacidad: 10, activa: true
+    capacidad: 15, activa: true
   };
 
   readonly roles: RolUsuario[] = ['cliente', 'admin', 'tecnico'];
@@ -99,6 +100,18 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
     return this.estaciones.find(estacion => estacion.id === id)?.nombre ?? id;
   }
 
+  estacionAlmacenamientoCompleta(estacion: Estacion): boolean {
+    const cantidadBicicletas = this.bicicletas.filter(bicicleta => bicicleta.estacion_id === estacion.id).length;
+    return Math.max(estacion.total_bicicletas ?? 0, cantidadBicicletas) >= this.limiteBicicletasPorEstacion;
+  }
+
+  get estacionDestinoCompleta(): boolean {
+    const estacion = this.estaciones.find(item => item.id === this.bicicletaForm.estacion_id);
+    if (!estacion || !this.estacionAlmacenamientoCompleta(estacion)) return false;
+    const bicicletaActual = this.bicicletas.find(bicicleta => bicicleta.id === this.seleccionado);
+    return bicicletaActual?.estacion_id !== estacion.id;
+  }
+
   cambiarSeccion(seccion: SeccionAdmin): void {
     if (this.seccion === 'estaciones' && seccion !== 'estaciones') {
       this.destruirMapaEstacion();
@@ -125,9 +138,17 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   guardar(): void {
+    if (this.seccion === 'bicicletas' && this.estacionDestinoCompleta) {
+      this.notifications.error('¡Estacion no disponible! Limite maximo alcanzado');
+      return;
+    }
     const accion = this.descripcionGuardado();
     void this.notifications.confirmarCambio(accion).then(ok => {
       if (!ok) return;
+      if (this.seccion === 'bicicletas' && this.estacionDestinoCompleta) {
+        this.notifications.error('¡Estacion no disponible! Limite maximo alcanzado');
+        return;
+      }
       if (this.seccion === 'usuarios') this.guardarUsuario();
       else if (this.seccion === 'bicicletas') this.guardarBicicleta();
       else if (this.seccion === 'estaciones') this.guardarEstacion();
@@ -243,7 +264,7 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
     };
     this.estacionForm = {
       nombre: '', barrio: '', direccion: '', lat: -33.7456, lng: -61.9688,
-      capacidad: 10, activa: true
+      capacidad: 15, activa: true
     };
     this.actualizarMarcadorEstacion(true);
   }
@@ -289,6 +310,10 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   private guardarEstacion(): void {
+    if (this.estacionForm.capacidad > this.limiteBicicletasPorEstacion) {
+      this.notifications.error(`La capacidad máxima por estación es de ${this.limiteBicicletasPorEstacion} bicicletas`);
+      return;
+    }
     const request = this.seleccionado
       ? this.estacionService.update(this.seleccionado, this.estacionForm)
       : this.estacionService.create(this.estacionForm);

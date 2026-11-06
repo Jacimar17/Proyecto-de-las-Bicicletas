@@ -59,9 +59,13 @@
       <label>Estación
         <select name="estacion" [(ngModel)]="bicicletaForm.estacion_id">
           <option [ngValue]="null">Sin estación</option>
-          <option *ngFor="let estacion of estaciones" [ngValue]="estacion.id" [disabled]="!estacion.activa">{{ estacion.nombre }}</option>
+          <option *ngFor="let estacion of estaciones" [ngValue]="estacion.id"
+            [disabled]="!estacion.activa || (estacionAlmacenamientoCompleta(estacion) && bicicletaForm.estacion_id !== estacion.id)">
+            {{ estacion.nombre }}{{ estacionAlmacenamientoCompleta(estacion) ? ' (completa)' : '' }}
+          </option>
         </select>
       </label>
+      <p *ngIf="estacionDestinoCompleta" class="error" role="alert">¡Estacion no disponible! Limite maximo alcanzado</p>
       <label>Estado
         <select name="estado" [(ngModel)]="bicicletaForm.estado">
           <option *ngFor="let estado of estadosBicicleta" [ngValue]="estado">{{ estado }}</option>
@@ -100,7 +104,7 @@
       </div>
       <label>Latitud<input name="lat" type="number" min="-90" max="90" step="any" [(ngModel)]="estacionForm.lat" (ngModelChange)="actualizarMarcadorEstacion()" required /></label>
       <label>Longitud<input name="lng" type="number" min="-180" max="180" step="any" [(ngModel)]="estacionForm.lng" (ngModelChange)="actualizarMarcadorEstacion()" required /></label>
-      <label>Capacidad<input name="capacidad" type="number" min="1" step="1" [(ngModel)]="estacionForm.capacidad" required /></label>
+      <label>Capacidad<input name="capacidad" type="number" min="1" [max]="limiteBicicletasPorEstacion" step="1" [(ngModel)]="estacionForm.capacidad" required /></label>
       <label class="checkbox"><input type="checkbox" name="activa" [(ngModel)]="estacionForm.activa" /> Habilitada</label>
       <div class="acciones">
         <button type="submit">{{ seleccionado ? 'Guardar cambios' : 'Agregar estación' }}</button>
