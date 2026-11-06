@@ -155,10 +155,10 @@ test("viaje: devolver dentro de 3 horas suma un punto de credibilidad", async ()
   assert.equal(result.bloqueado, false);
 });
 
-test("viaje: la credibilidad al devolver en 3 horas no supera 10 puntos", async () => {
+test("viaje: la credibilidad al devolver dentro de 3 horas no supera 10 puntos", async () => {
   const ctx = setup({ score: 10 });
   await startTrip(ctx);
-  ctx.trips[0].fecha_inicio = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  ctx.trips[0].fecha_inicio = new Date(Date.now() - (3 * 60 * 60 - 1) * 1000);
 
   const result = await ctx.service.finish("u1", "s2");
 
