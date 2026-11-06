@@ -34,6 +34,8 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   private readonly marcadoresPorId = new Map<string, L.Marker>();
   private popupAbiertoId = '';
   private refrescando = false;
+  private estacionesRequestId = 0;
+  private detalleRequestId = 0;
   private temporizador?: ReturnType<typeof setInterval>;
 
   constructor(
@@ -107,6 +109,7 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   }
 
   seleccionarEstacion(id: string): void {
+    const requestId = ++this.detalleRequestId;
     this.estacionIdSeleccionada = id;
     this.estacionSeleccionada = null;
     this.bicicletaId = '';
@@ -114,11 +117,14 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
     if (!id) return;
     this.estacionService.getById(id).subscribe({
       next: estacion => {
+        if (requestId !== this.detalleRequestId) return;
         this.estacionSeleccionada = estacion;
         this.estacionDestinoId = estacion.activa ? estacion.id ?? '' : '';
         this.changeDetector.markForCheck();
       },
-      error: error => this.mostrarError(error)
+      error: error => {
+        if (requestId === this.detalleRequestId) this.mostrarError(error);
+      }
     });
   }
 
@@ -199,8 +205,10 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   }
 
   private cargarEstaciones(): void {
+    const requestId = ++this.estacionesRequestId;
     this.estacionService.getAll().subscribe({
       next: estaciones => {
+        if (requestId !== this.estacionesRequestId) return;
         const primeraCarga = this.estaciones.length === 0;
         const popupAbierto = this.popupAbiertoId;
         this.estaciones = estaciones;
@@ -220,6 +228,7 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
         this.changeDetector.markForCheck();
       },
       error: error => {
+        if (requestId !== this.estacionesRequestId) return;
         this.cargando = false;
         this.mostrarError(error);
       }
