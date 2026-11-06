@@ -1,6 +1,7 @@
 import { createHash, randomInt, timingSafeEqual } from 'node:crypto';
 import { ApiError } from '../common/api-error';
 import { BicycleRepository } from '../bicycles/bicycle.repository.interface';
+import { assertStationHasCapacity } from '../bicycles/station-capacity';
 import { StationRepository } from '../stations/station.repository.interface';
 import { UserRepository } from '../users/user.repository.interface';
 import { Trip } from './trip.entity';
@@ -159,6 +160,7 @@ export class TripService {
         if (!station) throw new ApiError('Estación no encontrada', 404);
         if (!station.activa) throw new ApiError('La estación no está habilitada', 400);
         if (!bicycle) throw new ApiError('Bicicleta no encontrada', 404);
+        await assertStationHasCapacity(this.bicycleRepository, destinationStationId);
 
         const updated = await this.bicycleRepository.updateIfStatus(
             trip.bicicleta_id,

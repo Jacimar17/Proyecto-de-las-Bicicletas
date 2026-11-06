@@ -101,8 +101,12 @@ export class AdminComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   estacionAlmacenamientoCompleta(estacion: Estacion): boolean {
+    return this.totalBicicletasEstacion(estacion) >= this.limiteBicicletasPorEstacion;
+  }
+
+  totalBicicletasEstacion(estacion: Estacion): number {
     const cantidadBicicletas = this.bicicletas.filter(bicicleta => bicicleta.estacion_id === estacion.id).length;
-    return Math.max(estacion.total_bicicletas ?? 0, cantidadBicicletas) >= this.limiteBicicletasPorEstacion;
+    return Math.max(estacion.total_bicicletas ?? 0, cantidadBicicletas);
   }
 
   get estacionDestinoCompleta(): boolean {

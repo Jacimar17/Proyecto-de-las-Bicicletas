@@ -89,4 +89,35 @@ describe('AdminComponent', () => {
 
     expect(component.estacionDestinoCompleta).toBe(false);
   });
+
+  it('shows the actual station total even when the displayed available count is capped', () => {
+    const fixture = TestBed.createComponent(AdminComponent);
+    const component = fixture.componentInstance;
+    const station = {
+      id: 'station-1',
+      nombre: 'Centro',
+      barrio: 'Centro',
+      direccion: 'Belgrano 1',
+      lat: 0,
+      lng: 0,
+      capacidad: 15,
+      activa: true,
+      total_bicicletas: 15,
+      disponibles: 15
+    };
+    component.estaciones = [station];
+    component.bicicletas = Array.from({ length: 16 }, (_, index) => ({
+      id: `bike-${index}`,
+      codigo: `BIC-${index}`,
+      modelo: 'Urbana',
+      ubicacion: 'Centro',
+      estado: 'DISPONIBLE' as const,
+      estacion_id: station.id,
+      fecha_ultima_revision: null,
+      tecnico_responsable: null
+    }));
+
+    expect(component.totalBicicletasEstacion(station)).toBe(16);
+    expect(component.estacionAlmacenamientoCompleta(station)).toBe(true);
+  });
 });

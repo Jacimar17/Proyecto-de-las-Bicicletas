@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { BicycleService } from './bicycle.service';
+import { StationCapacityError } from './station-capacity';
 
 export class BicycleController {
     constructor(private readonly service: BicycleService) {}
@@ -38,6 +39,7 @@ export class BicycleController {
     };
 
     private statusFor(error: unknown): number {
+        if (error instanceof StationCapacityError) return error.status;
         const message = (error as Error).message;
         return message === 'Bicicleta no encontrada' ? 404 :
             message.includes('Ya existe') ? 409 : 400;

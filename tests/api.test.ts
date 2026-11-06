@@ -122,6 +122,39 @@ test("bicicletas: mismo router en rutas en inglés y en español", async () => {
   assert.equal(denied.status, 403);
 });
 
+test("bicicletas: el backend rechaza superar las 15 asignadas a una estación", async () => {
+  const base = await startServer();
+  const station = await fetch(`${base}/api/stations`, {
+    method: "POST",
+    headers: headers("admin"),
+    body: JSON.stringify({ nombre: "Norte", barrio: "Norte", direccion: "Mitre 2", lat: -33.74, lng: -61.97, capacidad: 15, activa: true }),
+  });
+  const { id: stationId } = (await station.json()) as { id: string };
+
+  for (let number = 1; number <= 15; number++) {
+    const response = await fetch(`${base}/api/bicycles`, {
+      method: "POST",
+      headers: headers("admin"),
+      body: JSON.stringify({
+        codigo: `NORTE-${number}`, modelo: "Urbana", ubicacion: "Norte",
+        estado: "DISPONIBLE", estacion_id: stationId,
+      }),
+    });
+    assert.equal(response.status, 201, `bicicleta ${number}`);
+  }
+
+  const overflow = await fetch(`${base}/api/bicycles`, {
+    method: "POST",
+    headers: headers("admin"),
+    body: JSON.stringify({
+      codigo: "NORTE-16", modelo: "Urbana", ubicacion: "Norte",
+      estado: "DISPONIBLE", estacion_id: stationId,
+    }),
+  });
+  assert.equal(overflow.status, 409);
+  assert.match((await overflow.json() as { message: string }).message, /límite máximo de 15/);
+});
+
 test("usuarios: registro, login y perfil por rutas en inglés y español", async () => {
   const base = await startServer();
   const register = await fetch(`${base}/api/usuarios/registro`, {

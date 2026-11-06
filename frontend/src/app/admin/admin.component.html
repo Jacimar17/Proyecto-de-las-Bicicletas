@@ -116,7 +116,7 @@
     <div class="tabla-wrap">
       <table><thead><tr><th>Nombre</th><th>Dirección</th><th>Bicicletas disponibles</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody><tr *ngFor="let estacion of estaciones">
-          <td>{{ estacion.nombre }}</td><td>{{ estacion.direccion }}</td><td>{{ estacion.disponibles }} / {{ estacion.total_bicicletas }}</td>
+          <td>{{ estacion.nombre }}</td><td>{{ estacion.direccion }}</td><td>{{ estacion.disponibles }} / {{ totalBicicletasEstacion(estacion) }}</td>
           <td>{{ estacion.activa ? 'Habilitada' : 'Deshabilitada' }}</td>
           <td class="acciones">
             <button type="button" (click)="editarEstacion(estacion)">Modificar</button>

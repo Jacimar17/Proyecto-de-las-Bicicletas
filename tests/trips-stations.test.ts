@@ -3,6 +3,8 @@ import { test } from "node:test";
 import { createHash } from "node:crypto";
 import { Bicycle } from "../src/bicycles/bicycle.entity";
 import { BicycleRepository } from "../src/bicycles/bicycle.repository.interface";
+import { BicycleService } from "../src/bicycles/bicycle.service";
+import { StationCapacityError } from "../src/bicycles/station-capacity";
 import { Station } from "../src/stations/station.entity";
 import { StationRepository } from "../src/stations/station.repository.interface";
 import { StationService } from "../src/stations/station.service";
@@ -210,6 +212,25 @@ test("estaciones: el listado incluye totales y el detalle sus bicicletas", async
   await assert.rejects(service.getById("nope"), { message: "Estación no encontrada" });
 });
 
+test("estaciones: el total cuenta todas las bicicletas y las disponibles respetan la capacidad", async () => {
+  const ctx = setup();
+  ctx.bicycles.push(...Array.from({ length: 15 }, (_, index) => ({
+    id: `overflow-${index}`,
+    codigo: `EXTRA-${index}`,
+    modelo: "Urbana",
+    ubicacion: "Centro",
+    estado: "DISPONIBLE" as const,
+    estacion_id: "s1",
+    fecha_ultima_revision: null,
+    tecnico_responsable: null,
+  })));
+  const service = new StationService(ctx.stationRepository, ctx.bicycleRepository);
+  const centro = (await service.getAll()).find((station) => station.id === "s1");
+
+  assert.equal(centro?.total_bicicletas, 16);
+  assert.equal(centro?.disponibles, 5);
+});
+
 test("estaciones: validación y no se elimina una estación con bicicletas", async () => {
   const ctx = setup();
   const service = new StationService(ctx.stationRepository, ctx.bicycleRepository);
@@ -220,4 +241,84 @@ test("estaciones: validación y no se elimina una estación con bicicletas", asy
   await assert.rejects(service.delete("s1"), { message: "No se puede eliminar una estación con bicicletas asignadas" });
   await service.delete("s2");
   assert.equal(ctx.stations.length, 1);
+});
+
+test("bicicletas: el backend permite llegar a 15 pero rechaza la siguiente", async () => {
+  const ctx = setup();
+  ctx.bicycles.push(...Array.from({ length: 13 }, (_, index) => ({
+    id: `extra-${index}`,
+    codigo: `EXTRA-${index}`,
+    modelo: "Urbana",
+    ubicacion: "Centro",
+    estado: "DISPONIBLE" as const,
+    estacion_id: "s1",
+    fecha_ultima_revision: null,
+    tecnico_responsable: null,
+  })));
+  const service = new BicycleService(ctx.bicycleRepository, ctx.stationRepository);
+  const nextBicycle = (codigo: string) => ({
+    codigo,
+    modelo: "Urbana",
+    ubicacion: "Centro",
+    estado: "DISPONIBLE" as const,
+    estacion_id: "s1",
+    fecha_ultima_revision: null,
+    tecnico_responsable: null,
+  });
+
+  await service.create(nextBicycle("BIC-15"));
+  await assert.rejects(service.create(nextBicycle("BIC-16")), (error) => error instanceof StationCapacityError);
+  assert.equal(ctx.bicycles.length, 15);
+});
+
+test("bicicletas: editar en la estación llena se permite, trasladar a otra llena no", async () => {
+  const ctx = setup();
+  ctx.bicycles.push(...Array.from({ length: 14 }, (_, index) => ({
+    id: `center-${index}`,
+    codigo: `CENTER-${index}`,
+    modelo: "Urbana",
+    ubicacion: "Centro",
+    estado: "DISPONIBLE" as const,
+    estacion_id: "s1",
+    fecha_ultima_revision: null,
+    tecnico_responsable: null,
+  })));
+  ctx.bicycles.push(...Array.from({ length: 15 }, (_, index) => ({
+    id: `north-${index}`,
+    codigo: `NORTH-${index}`,
+    modelo: "Urbana",
+    ubicacion: "Norte",
+    estado: "DISPONIBLE" as const,
+    estacion_id: "s2",
+    fecha_ultima_revision: null,
+    tecnico_responsable: null,
+  })));
+  const service = new BicycleService(ctx.bicycleRepository, ctx.stationRepository);
+
+  await service.update("b1", { modelo: "Urbana reforzada" });
+  assert.equal(ctx.bicycles[0].modelo, "Urbana reforzada");
+  await assert.rejects(
+    service.update("b1", { estacion_id: "s2" }),
+    (error) => error instanceof StationCapacityError
+  );
+  assert.equal(ctx.bicycles[0].estacion_id, "s1");
+});
+
+test("viaje: no se devuelve una bicicleta a una estación que ya tiene 15", async () => {
+  const ctx = setup();
+  ctx.bicycles.push(...Array.from({ length: 15 }, (_, index) => ({
+    id: `north-${index}`,
+    codigo: `NORTH-${index}`,
+    modelo: "Urbana",
+    ubicacion: "Norte",
+    estado: "DISPONIBLE" as const,
+    estacion_id: "s2",
+    fecha_ultima_revision: null,
+    tecnico_responsable: null,
+  })));
+  await startTrip(ctx);
+
+  await assert.rejects(ctx.service.finish("u1", "s2"), { status: 409 });
+  assert.equal(ctx.bicycles[0].estado, "EN_USO");
+  assert.equal(ctx.bicycles[0].estacion_id, null);
 });

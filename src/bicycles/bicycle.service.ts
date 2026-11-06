@@ -1,6 +1,7 @@
 import { StationRepository } from '../stations/station.repository.interface';
 import { Bicycle, BicycleStatus } from './bicycle.entity';
 import { BicycleRepository } from './bicycle.repository.interface';
+import { assertStationHasCapacity } from './station-capacity';
 
 const STATUSES: BicycleStatus[] = [
     'DISPONIBLE', 'RESERVADA', 'EN_USO', 'EN_MANTENIMIENTO', 'APTA', 'NO_APTA'
@@ -22,6 +23,7 @@ export class BicycleService {
             throw new Error('Ya existe una bicicleta con ese código');
         }
         await this.validateStation(data.estacion_id);
+        if (data.estacion_id) await assertStationHasCapacity(this.repository, data.estacion_id);
         return this.repository.create({ ...data, codigo: data.codigo.trim() });
     }
 
@@ -34,6 +36,9 @@ export class BicycleService {
         const duplicate = await this.repository.findByCode(updated.codigo.trim());
         if (duplicate && duplicate.id !== id) throw new Error('Ya existe una bicicleta con ese código');
         await this.validateStation(updated.estacion_id);
+        if (updated.estacion_id && updated.estacion_id !== existing.estacion_id) {
+            await assertStationHasCapacity(this.repository, updated.estacion_id);
+        }
 
         const result = await this.repository.update(id, { ...data, codigo: updated.codigo.trim() });
         if (!result) throw new Error('Bicicleta no encontrada');
