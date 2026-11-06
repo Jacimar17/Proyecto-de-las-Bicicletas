@@ -83,50 +83,25 @@ Proyecto-de-las-Bicicletas/
 
 ### Requisitos Previos
 
-- **Node.js**: Versión 18 o superior (probado en Node.js v20+ / v24).
+- **Node.js**: `22.22.3+`, `24.15.0+` o `26+` (requisito de Angular CLI 22.2).
 - **npm**: Gestor de paquetes incluido con Node.js.
 - **MongoDB**: Instancia local de MongoDB en ejecución (puerto `27017`) o un clúster de **MongoDB Atlas**.
 
 ### Configuración del Entorno (`.env`)
 
-Crea tu archivo `.env` en la raíz del proyecto copiando la plantilla `.env.example`:
+Crea tu archivo `.env` en la raíz del proyecto copiando [.env.example](./.env.example):
 
 ```bash
 cp .env.example .env
 ```
 
-Configura las variables según tu entorno:
+En PowerShell puedes usar `Copy-Item .env.example .env`. Ajusta los valores del archivo según tu entorno. No compartas ni subas el `.env` real al repositorio.
 
-```ini
-# Modo de base de datos: 'local' (predeterminado) o 'atlas'
-MONGO_MODE=local
-
-# Nombre de la base de datos
-MONGO_DB_NAME=bicicletas
-
-# Conexión local (requerida si MONGO_MODE=local)
-LOCAL_MONGO_URI=mongodb://127.0.0.1:27017
-
-# Conexión directa a MongoDB Atlas (requerida si MONGO_MODE=atlas)
-# ATLAS_URI=mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
-
-# Clave secreta privada para firmar y verificar tokens JWT
-JWT_SECRET=tu-clave-secreta-aleatoria
-
-# Client ID de Google Cloud OAuth 2.0 (Aplicación web para Google Sign-In)
-GOOGLE_CLIENT_ID=tu-google-client-id.apps.googleusercontent.com
-
-# Puerto de la API Express
-PORT=3000
-
-# URL base consumida por el frontend y el CLI
-API_BASE_URL=http://localhost:3000
-```
-
-> [!NOTE]
-> - **Modo Local:** Utiliza `LOCAL_MONGO_URI`. Si además defines `ATLAS_URI`, se activa automáticamente el servicio de sincronización en segundo plano con Atlas.
-> - **Modo Atlas:** Guarda y consulta directamente sobre MongoDB Atlas sin requerir MongoDB instalado localmente. Recuerda habilitar tu dirección IP en **Network Access** en la consola de Atlas.
-> - **Google OAuth:** Si no se define `GOOGLE_CLIENT_ID`, el inicio de sesión tradicional con DNI continúa funcionando normalmente y el botón de Google se oculta automáticamente.
+> - **Modo local:** Usa `LOCAL_MONGO_URI` (o, como alternativas, `MONGO_URI` / `DATABASE_URL`; si no se configura ninguna, usa `mongodb://127.0.0.1:27017`). Si también configuras `ATLAS_URI`, se habilita la sincronización periódica entre la base local y Atlas.
+> - **Modo Atlas:** `ATLAS_URI` es obligatorio y la aplicación usa Atlas directamente; no se ejecuta sincronización local/Atlas. Habilita tu dirección IP en **Network Access** de Atlas.
+> - **Google Sign-In:** `GOOGLE_CLIENT_ID` debe coincidir con el ID de cliente configurado en `frontend/src/app/shared/google-config.ts`. Si no se configura en el backend, el inicio de sesión con Google falla; el acceso tradicional sigue disponible.
+> - **Otras variables opcionales:** `SYNC_INTERVAL_MS` cambia el intervalo de sincronización (30 segundos por defecto); `SEED_ADMIN_PASSWORD` define la contraseña inicial compartida por admin y técnico al sembrar datos; `ADMIN_DNI` y `ADMIN_PASSWORD` solo se usan en la migración.
+> - `API_BASE_URL` solo configura el CLI. La URL de la API del frontend está definida actualmente en `frontend/src/app/shared/api-config.ts`.
 
 ---
 
@@ -176,12 +151,12 @@ Abre tu navegador en: **`http://localhost:4200`**
 | `npm run dev` | Inicia backend y frontend en paralelo con `concurrently`, liberando puertos `3000` y `4200` previamente. |
 | `npm run start:backend` | Inicia únicamente la API Express con `nodemon` y `ts-node` en desarrollo. |
 | `npm run start:frontend` | Inicia únicamente el frontend Angular (`ng serve`). |
-| `npm start` | Inicia la API backend en modo producción / ejecución directa (`node -r ts-node/register server.ts`). |
+| `npm start` | Inicia directamente la API backend con `ts-node` (`node -r ts-node/register server.ts`). |
 | `npm run menu` | Inicia el menú interactivo por consola (CLI). |
 | `npm run seed` | Carga las cuentas por defecto, 5 estaciones activas, 10 barrios, 50 bicicletas y datos de muestra sin borrar colecciones. |
 | `npm run migrate:bicis-admin` | Script de migración para normalizar códigos de bicicletas (`BICI - 01`) y asignar rol administrador por DNI. |
-| `npm test` | Ejecuta las pruebas del backend en `tests/` y `test/`. |
-| `npm run build` | Valida tipos TypeScript en el backend (`tsc --noEmit`). |
+| `npm test` | Ejecuta los cinco archivos de pruebas del backend definidos en `package.json`. |
+| `npm run build` | Comprueba los tipos TypeScript del backend (`tsc --noEmit`); no genera una compilación de producción. |
 | `npm --prefix frontend test` | Ejecuta las pruebas unitarias del frontend con **Vitest**. |
 | `npm --prefix frontend run build` | Compila la aplicación Angular para producción en `frontend/dist/`. |
 
