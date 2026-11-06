@@ -146,13 +146,24 @@ test("viaje: no se permite un segundo viaje en curso", async () => {
   await assert.rejects(ctx.service.generateUnlockCode("u1", "b1"), { status: 409, message: "Ya tienes un viaje en curso" });
 });
 
-test("viaje: menos de 3 minutos no descuenta puntos", async () => {
+test("viaje: devolver dentro de 3 horas suma un punto de credibilidad", async () => {
   const ctx = setup({ score: 8 });
   await startTrip(ctx);
-  ctx.trips[0].fecha_inicio = new Date(Date.now() - 2 * 60 * 1000);
+  ctx.trips[0].fecha_inicio = new Date(Date.now() - 2 * 60 * 60 * 1000);
   const result = await ctx.service.finish("u1", "s2");
-  assert.equal(result.puntuacion, 8);
+  assert.equal(result.puntuacion, 9);
   assert.equal(result.bloqueado, false);
+});
+
+test("viaje: la credibilidad al devolver en 3 horas no supera 10 puntos", async () => {
+  const ctx = setup({ score: 10 });
+  await startTrip(ctx);
+  ctx.trips[0].fecha_inicio = new Date(Date.now() - 3 * 60 * 60 * 1000);
+
+  const result = await ctx.service.finish("u1", "s2");
+
+  assert.equal(result.puntuacion, 10);
+  assert.equal(ctx.users[0].puntuacion, 10);
 });
 
 test("viaje: la finalización devuelve la duración transcurrida en segundos", async () => {
@@ -169,22 +180,22 @@ test("viaje: la finalización devuelve la duración transcurrida en segundos", a
   assert.ok(result.duracion_segundos >= 125);
 });
 
-test("viaje: desde 3 minutos descuenta 1 punto y desde 5 minutos descuenta 2", async () => {
-  const threeMinutes = setup({ score: 8 });
-  await startTrip(threeMinutes);
-  threeMinutes.trips[0].fecha_inicio = new Date(Date.now() - (3 * 60 + 1) * 1000);
-  assert.equal((await threeMinutes.service.finish("u1", "s2")).puntuacion, 7);
+test("viaje: después de 3 horas descuenta 1 punto y desde 5 horas descuenta 2", async () => {
+  const threeHours = setup({ score: 8 });
+  await startTrip(threeHours);
+  threeHours.trips[0].fecha_inicio = new Date(Date.now() - (3 * 60 * 60 + 1) * 1000);
+  assert.equal((await threeHours.service.finish("u1", "s2")).puntuacion, 7);
 
-  const fiveMinutes = setup({ score: 8 });
-  await startTrip(fiveMinutes);
-  fiveMinutes.trips[0].fecha_inicio = new Date(Date.now() - (5 * 60 + 1) * 1000);
-  assert.equal((await fiveMinutes.service.finish("u1", "s2")).puntuacion, 6);
+  const fiveHours = setup({ score: 8 });
+  await startTrip(fiveHours);
+  fiveHours.trips[0].fecha_inicio = new Date(Date.now() - 5 * 60 * 60 * 1000);
+  assert.equal((await fiveHours.service.finish("u1", "s2")).puntuacion, 6);
 });
 
-test("viaje: más de 6 minutos bloquea la cuenta sin descontar puntos", async () => {
+test("viaje: más de 6 horas bloquea la cuenta sin descontar puntos", async () => {
   const ctx = setup({ score: 8 });
   await startTrip(ctx);
-  ctx.trips[0].fecha_inicio = new Date(Date.now() - (6 * 60 + 1) * 1000);
+  ctx.trips[0].fecha_inicio = new Date(Date.now() - (6 * 60 * 60 + 1) * 1000);
   const result = await ctx.service.finish("u1", "s2");
   assert.equal(result.puntuacion, 8);
   assert.equal(result.bloqueado, true);
