@@ -18,7 +18,12 @@ const UNLOCK_CODE_TTL_MS = 5 * 60 * 1000;
 const MAX_UNLOCK_CODE_ATTEMPTS = 5;
 const UNLOCK_CODE_PATTERN = /^\d{4}$/;
 
-export type FinishedTrip = Trip & { puntuacion: number; suspendidoHasta: Date | null; bloqueado: boolean };
+export type FinishedTrip = Trip & {
+    puntuacion: number;
+    suspendidoHasta: Date | null;
+    bloqueado: boolean;
+    duracion_segundos: number;
+};
 
 export class TripService {
     constructor(
@@ -172,11 +177,12 @@ export class TripService {
             if (!Number.isFinite(startedAt.getTime()) || finishedAt.getTime() < startedAt.getTime()) {
                 throw new Error('Las fechas del viaje no permiten calcular la puntuación');
             }
+            const durationMs = finishedAt.getTime() - startedAt.getTime();
+            const durationSeconds = Math.floor(durationMs / 1000);
             const currentScore =
                 typeof account.puntuacion === 'number' && Number.isInteger(account.puntuacion)
                     ? Math.max(MIN_SCORE, Math.min(MAX_SCORE, account.puntuacion))
                     : MAX_SCORE;
-            const durationMs = finishedAt.getTime() - startedAt.getTime();
             const blockedForDuration = durationMs > SIX_MINUTES_MS;
             const pointsToDeduct = durationMs >= FIVE_MINUTES_MS
                 ? 2
@@ -206,7 +212,8 @@ export class TripService {
                 ...finished,
                 puntuacion: newScore,
                 suspendidoHasta: suspendedUntil,
-                bloqueado: blocked
+                bloqueado: blocked,
+                duracion_segundos: durationSeconds
             };
         } catch (error) {
             if (!tripFinalized) {

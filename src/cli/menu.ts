@@ -11,6 +11,16 @@ function print(obj: unknown): void {
   console.log(JSON.stringify(obj, null, 2));
 }
 
+function formatTripDuration(durationSeconds: number | undefined): string | null {
+  if (!Number.isInteger(durationSeconds) || durationSeconds === undefined || durationSeconds < 0) {
+    return null;
+  }
+  const hours = Math.floor(durationSeconds / 3600);
+  const minutes = Math.floor((durationSeconds % 3600) / 60);
+  const seconds = durationSeconds % 60;
+  return `${hours} ${hours === 1 ? "hora" : "horas"}, ${minutes} ${minutes === 1 ? "minuto" : "minutos"} y ${seconds} ${seconds === 1 ? "segundo" : "segundos"}`;
+}
+
 function apiFetch(
   path: string,
   method = "GET",
@@ -275,6 +285,8 @@ async function clientFinishTrip(): Promise<void> {
     console.log("\nBicicleta devuelta; viaje finalizado.");
     console.log(`Destino: ${station.nombre}`);
     console.log(`Fecha y hora de finalización: ${new Date(data.fecha_fin as string).toLocaleString()}\n`);
+    const duration = formatTripDuration(data.duracion_segundos);
+    if (duration) console.log(`Tardaste ${duration} en devolver tu bicicleta.\n`);
     console.log(`Puntuación actual: ${data.puntuacion ?? "no disponible"}/10`);
     if (data.bloqueado) {
       console.log("Tu cuenta quedó bloqueada. Contacta a un administrador.\n");

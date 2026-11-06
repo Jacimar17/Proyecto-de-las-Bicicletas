@@ -153,6 +153,20 @@ test("viaje: menos de 3 minutos no descuenta puntos", async () => {
   assert.equal(result.bloqueado, false);
 });
 
+test("viaje: la finalización devuelve la duración transcurrida en segundos", async () => {
+  const ctx = setup();
+  await startTrip(ctx);
+  ctx.trips[0].fecha_inicio = new Date(Date.now() - 125_000);
+
+  const result = await ctx.service.finish("u1", "s2");
+
+  assert.equal(
+    result.duracion_segundos,
+    Math.floor((new Date(result.fecha_fin!).getTime() - new Date(ctx.trips[0].fecha_inicio).getTime()) / 1000)
+  );
+  assert.ok(result.duracion_segundos >= 125);
+});
+
 test("viaje: desde 3 minutos descuenta 1 punto y desde 5 minutos descuenta 2", async () => {
   const threeMinutes = setup({ score: 8 });
   await startTrip(threeMinutes);

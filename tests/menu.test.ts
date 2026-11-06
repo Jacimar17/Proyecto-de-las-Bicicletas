@@ -93,6 +93,106 @@ test("client menu displays the requested account warning", { timeout: 20_000 }, 
   }
 });
 
+test("client menu displays the elapsed time after returning a bicycle", { timeout: 20_000 }, async () => {
+  const finishedAt = new Date().toISOString();
+  const server = createServer((request, response) => {
+    const path = new URL(request.url ?? "/", `http://${request.headers.host}`).pathname;
+    if (path === "/api/users/login" && request.method === "POST") {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({
+        token: "client-token",
+        role: "cliente",
+        user: { email: "client@example.com", nombre: "Cliente", role: "cliente" },
+      }));
+      return;
+    }
+    if (path === "/api/trips/active" && request.method === "GET") {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({
+        id: "trip-1",
+        bicicleta_id: "bike-1",
+        estacion_origen_id: "station-1",
+        estacion_destino_id: null,
+        fecha_inicio: new Date(Date.now() - 3_665_000).toISOString(),
+        fecha_fin: null,
+      }));
+      return;
+    }
+    if (path === "/api/stations" && request.method === "GET") {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify([
+        { id: "station-2", nombre: "Centro", barrio: "Centro", direccion: "Belgrano 1", activa: true },
+      ]));
+      return;
+    }
+    if (path === "/api/trips/active/finish" && request.method === "PATCH") {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({
+        fecha_fin: finishedAt,
+        duracion_segundos: 3_665,
+        puntuacion: 10,
+        bloqueado: false,
+        suspendidoHasta: null,
+      }));
+      return;
+    }
+    response.writeHead(404, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ message: "Not found" }));
+  });
+
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+
+  try {
+    const result = await new Promise<{ status: number | null; stdout: string; stderr: string }>((resolve, reject) => {
+      const child = spawn(
+        process.execPath,
+        ["-r", "ts-node/register", "src/cli/index.ts"],
+        {
+          cwd: process.cwd(),
+          env: { ...process.env, API_BASE_URL: `http://127.0.0.1:${address.port}` },
+          stdio: ["pipe", "pipe", "pipe"],
+        }
+      );
+      let stdout = "";
+      let stderr = "";
+      const responses: Array<[string, string]> = [
+        ["Selecciona una opción: ", "1"],
+        ["Email: ", "client@example.com"],
+        ["Contraseña: ", "pass"],
+        ["Selecciona una opción: ", "3"],
+        ["Selecciona el número de la estación: ", "1"],
+        ["Selecciona una opción: ", "7"],
+      ];
+      let nextResponse = 0;
+      let searchFrom = 0;
+      child.stdout.setEncoding("utf8").on("data", (chunk: string) => {
+        stdout += chunk;
+        while (nextResponse < responses.length) {
+          const [prompt, answer] = responses[nextResponse];
+          const promptIndex = stdout.indexOf(prompt, searchFrom);
+          if (promptIndex < 0) break;
+          searchFrom = promptIndex + prompt.length;
+          nextResponse++;
+          child.stdin.write(`${answer}\n`);
+        }
+      });
+      child.stderr.setEncoding("utf8").on("data", (chunk: string) => { stderr += chunk; });
+      child.on("error", reject);
+      child.on("close", (status) => resolve({ status, stdout, stderr }));
+    });
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Tardaste 1 hora, 1 minuto y 5 segundos en devolver tu bicicleta\./);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => error ? reject(error) : resolve());
+    });
+  }
+});
+
 test("CLI API client accepts successful 204 responses without a body", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => new Response(null, { status: 204 });

@@ -173,14 +173,29 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   devolverBicicleta(): void {
     if (!this.estacionDestinoId) return;
     this.viajeService.finish(this.estacionDestinoId).subscribe({
-      next: () => {
+      next: viaje => {
         this.viajeActivo = null;
-        this.notifications.success('Bicicleta devuelta correctamente.', 'Viaje finalizado');
+        const duracion = this.formatearDuracion(viaje.duracion_segundos);
+        this.notifications.success(
+          duracion
+            ? `Tardaste ${duracion} en devolver tu bicicleta`
+            : 'Bicicleta devuelta correctamente.',
+          'Viaje finalizado'
+        );
         this.actualizarDisponibilidad();
         this.changeDetector.markForCheck();
       },
       error: error => this.mostrarError(error)
     });
+  }
+
+  private formatearDuracion(duracionSegundos: number): string | null {
+    if (!Number.isInteger(duracionSegundos) || duracionSegundos < 0) return null;
+
+    const horas = Math.floor(duracionSegundos / 3600);
+    const minutos = Math.floor((duracionSegundos % 3600) / 60);
+    const segundos = duracionSegundos % 60;
+    return `${horas} ${horas === 1 ? 'hora' : 'horas'}, ${minutos} ${minutos === 1 ? 'minuto' : 'minutos'} y ${segundos} ${segundos === 1 ? 'segundo' : 'segundos'}`;
   }
 
   private cargarEstaciones(): void {

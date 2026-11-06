@@ -41,6 +41,7 @@ export interface ApiData {
   bloqueado?: boolean;
   fecha_fin?: string | null;
   fecha_inicio?: string;
+  duracion_segundos?: number;
 }
 
 export interface Station {

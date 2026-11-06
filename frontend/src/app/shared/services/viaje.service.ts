@@ -13,6 +13,10 @@ export interface Viaje {
   fecha_fin: string | null;
 }
 
+export interface ViajeFinalizado extends Viaje {
+  duracion_segundos: number;
+}
+
 export interface CodigoDesbloqueo {
   codigo: string;
   expira_en: string;
@@ -50,8 +54,8 @@ export class ViajeService {
     });
   }
 
-  finish(estacionDestinoId: string): Observable<Viaje> {
-    return this.http.patch<Viaje>(`${this.api}/activo/finalizar`, {
+  finish(estacionDestinoId: string): Observable<ViajeFinalizado> {
+    return this.http.patch<ViajeFinalizado>(`${this.api}/activo/finalizar`, {
       estacion_destino_id: estacionDestinoId
     });
   }
